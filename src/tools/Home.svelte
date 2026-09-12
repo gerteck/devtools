@@ -38,7 +38,7 @@
   <div class="text-left max-w-2xl mx-auto mb-10 w-full">
     <h1 class="text-2xl font-semibold tracking-tight text-on-surface mb-2 font-mono">devtools</h1>
     <p class="text-sm text-on-surface-variant font-normal leading-relaxed">
-      A small collection of lightweight everyday tools for web development.
+      A small collection of lightweight tools for development.
     </p>
 
     <!-- Search Input -->
