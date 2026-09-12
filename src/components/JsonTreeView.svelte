@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight, ChevronDown, Copy, Check } from 'lucide-svelte';
+  import { ChevronRight, ChevronDown, Copy, Check } from '@lucide/svelte';
   import JsonTreeView from './JsonTreeView.svelte';
 
   let {

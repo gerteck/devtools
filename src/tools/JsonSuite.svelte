@@ -16,7 +16,7 @@
     AlertCircle,
     CheckCircle2,
     SlidersHorizontal,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
 
   let { initialTab = 'editor' }: { initialTab?: 'editor' | 'tree' | 'diff' } = $props();
 

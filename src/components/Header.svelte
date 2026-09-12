@@ -1,7 +1,7 @@
 <script lang="ts">
   import { router } from '../router.svelte';
   import type { Route } from '../types';
-  import { Moon, Sun, Terminal } from 'lucide-svelte';
+  import { Moon, Sun, Terminal } from '@lucide/svelte';
 
   let {
     theme = 'dark',

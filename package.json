@@ -10,7 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "lucide-svelte": "^0.475.0",
+    "@lucide/svelte": "^1.45.0",
     "mermaid": "^11.4.1",
     "monaco-editor": "^0.52.2",
     "svelte": "^5.20.2"

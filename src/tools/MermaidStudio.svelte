@@ -17,7 +17,7 @@
     Sparkles,
     Copy,
     Check,
-  } from 'lucide-svelte';
+  } from '@lucide/svelte';
 
   // Persistent draft
   const mermaidDraft = createPersistedState('devtools_mermaid_draft', SAMPLES.mermaidFlowchart);
