@@ -2,6 +2,7 @@
   import { router } from '../router.svelte';
   import type { Route } from '../types';
   import { Moon, Sun, Terminal } from '@lucide/svelte';
+  import pkg from '../../package.json';
 
   let {
     theme = 'dark',
@@ -20,7 +21,7 @@
     <div class="flex items-center gap-3">
       <button
         onclick={() => router.navigate('/')}
-        class="flex items-center gap-2.5 text-left group transition-opacity hover:opacity-80"
+        class="flex items-center gap-2.5 text-left group transition-opacity hover:opacity-80 cursor-pointer"
       >
         <div class="w-6 h-6 rounded bg-primary text-white flex items-center justify-center shadow-sm">
           <Terminal size={15} strokeWidth={2.5} />
@@ -30,36 +31,16 @@
 
       <span class="text-outline-variant font-light">/</span>
       <span class="text-xs font-mono font-medium text-on-surface-variant px-2 py-0.5 rounded-full bg-surface-container border border-outline-variant">
-        v2.4.0
+        v{pkg.version}
       </span>
     </div>
 
-    <!-- Center & Right Controls -->
-    <div class="flex items-center gap-4 sm:gap-6">
-      <nav class="flex items-center gap-5 text-xs text-on-surface-variant font-mono">
-        <button
-          onclick={() => router.navigate('/')}
-          class="hover:text-on-surface transition-colors {currentRoute === '/' ? 'text-primary font-semibold' : ''}"
-        >
-          tools
-        </button>
-        <a
-          href="https://github.com"
-          target="_blank"
-          rel="noreferrer"
-          class="hover:text-on-surface transition-colors"
-        >
-          source
-        </a>
-      </nav>
-
-      <div class="h-4 w-px bg-outline-variant"></div>
-
-      <!-- Theme Switcher -->
+    <!-- Right Controls: Theme Switcher -->
+    <div class="flex items-center gap-3">
       <button
         onclick={onToggleTheme}
         aria-label="Toggle theme"
-        class="p-1.5 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
+        class="p-1.5 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center cursor-pointer"
         title="Toggle Theme"
       >
         {#if theme === 'dark'}

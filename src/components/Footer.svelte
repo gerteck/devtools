@@ -10,28 +10,23 @@
   ];
 </script>
 
-<footer class="w-full border-t border-outline-variant bg-surface py-4 select-none shrink-0 transition-colors">
-  <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant font-mono">
-    <div>
-      <span>Built for daily use. 100% client-side & open source.</span>
-    </div>
-    <div class="flex items-center gap-4">
-      <button
-        onclick={() => (showShortcutsModal = true)}
-        class="hover:text-on-surface transition-colors cursor-pointer"
-      >
-        shortcuts
-      </button>
-      <span class="text-outline-variant">/</span>
-      <a
-        href="https://github.com"
-        target="_blank"
-        rel="noreferrer"
-        class="hover:text-on-surface transition-colors"
-      >
-        github
-      </a>
-    </div>
+<footer class="w-full border-t border-outline-variant bg-surface py-3.5 select-none shrink-0 transition-colors">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-end gap-4 text-xs font-mono text-on-surface-variant">
+    <button
+      onclick={() => (showShortcutsModal = true)}
+      class="hover:text-on-surface transition-colors cursor-pointer"
+    >
+      shortcuts
+    </button>
+    <span class="text-outline-variant">/</span>
+    <a
+      href="https://github.com/gerteck/devtools/"
+      target="_blank"
+      rel="noreferrer"
+      class="hover:text-on-surface transition-colors"
+    >
+      github
+    </a>
   </div>
 </footer>
 
