@@ -35,8 +35,8 @@
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ (tested on Node v20/v24)
-- npm 9+
+- Node.js 22+ (Active LTS, tested on v22 & v24)
+- npm 10+
 
 ### Development
 ```bash
