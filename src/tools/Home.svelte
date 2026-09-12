@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { router, TOOLS } from '../router';
+  import { router, TOOLS } from '../router.svelte';
   import { Search, ArrowRight, Braces, GitCompare, Workflow } from 'lucide-svelte';
 
   let searchQuery = $state('');

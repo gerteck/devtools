@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { router } from './router';
+  import { router } from './router.svelte';
   import Header from './components/Header.svelte';
   import SidebarRail from './components/SidebarRail.svelte';
   import Footer from './components/Footer.svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { router } from '../router';
+  import { router } from '../router.svelte';
   import type { Route } from '../types';
   import { Moon, Sun, Terminal } from 'lucide-svelte';
 

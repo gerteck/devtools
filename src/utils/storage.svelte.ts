@@ -1,12 +1,14 @@
 // Reactive local storage helper using Svelte 5 Runes
 
 export function createPersistedState<T>(key: string, initialValue: T) {
-  let stored: T;
-  try {
-    const raw = localStorage.getItem(key);
-    stored = raw !== null ? JSON.parse(raw) : initialValue;
-  } catch {
-    stored = initialValue;
+  let stored: T = initialValue;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) stored = JSON.parse(raw);
+    } catch {
+      stored = initialValue;
+    }
   }
 
   let value = $state<T>(stored);

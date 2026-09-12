@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { router, TOOLS } from '../router';
+  import { router, TOOLS } from '../router.svelte';
   import type { Route } from '../types';
   import { Braces, GitCompare, Workflow, LayoutGrid } from 'lucide-svelte';
 
