@@ -53,9 +53,7 @@
 
   <!-- App Body: Sidebar Rail + Tool Content -->
   <div class="flex-1 flex min-h-0 overflow-hidden">
-    {#if router.currentRoute !== '/'}
-      <SidebarRail currentRoute={router.currentRoute} />
-    {/if}
+    <SidebarRail currentRoute={router.currentRoute} />
 
     <main class="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto bg-background">
       {#if router.currentRoute === '/'}
