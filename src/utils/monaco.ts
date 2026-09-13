@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import type { ColorScheme, ThemeMode } from '../types';
 
 // Configure Monaco Environment for local web workers
@@ -8,6 +9,9 @@ self.MonacoEnvironment = {
   getWorker(_, label) {
     if (label === 'json') {
       return new jsonWorker();
+    }
+    if (label === 'typescript' || label === 'javascript') {
+      return new tsWorker();
     }
     return new editorWorker();
   },

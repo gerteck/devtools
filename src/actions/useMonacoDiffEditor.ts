@@ -84,12 +84,17 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       options = newOptions;
     },
     destroy() {
-      resizeObserver.disconnect();
-      origDisposable.dispose();
-      modDisposable.dispose();
-      originalModel.dispose();
-      modifiedModel.dispose();
-      diffEditor.dispose();
+      try {
+        resizeObserver.disconnect();
+        origDisposable.dispose();
+        modDisposable.dispose();
+        diffEditor.setModel(null);
+        diffEditor.dispose();
+        originalModel.dispose();
+        modifiedModel.dispose();
+      } catch (err) {
+        console.warn('Error disposing Monaco diff editor:', err);
+      }
     },
   };
 };

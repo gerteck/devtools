@@ -70,9 +70,13 @@ export const useMonacoEditor: Action<HTMLElement, MonacoEditorOptions> = (node, 
       options = newOptions;
     },
     destroy() {
-      resizeObserver.disconnect();
-      disposable.dispose();
-      editor.dispose();
+      try {
+        resizeObserver.disconnect();
+        disposable.dispose();
+        editor.dispose();
+      } catch (err) {
+        console.warn('Error disposing Monaco editor:', err);
+      }
     },
   };
 };
