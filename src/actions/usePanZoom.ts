@@ -39,7 +39,7 @@ export const usePanZoom: Action<HTMLElement, PanZoomOptions | undefined> = (node
   function applyTransform() {
     const target = getTarget();
     if (target) {
-      target.style.transformOrigin = '0 0';
+      target.style.transformOrigin = 'center center';
       target.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
       target.style.transition = isDragging ? 'none' : 'transform 0.1s ease-out';
     }
@@ -51,13 +51,17 @@ export const usePanZoom: Action<HTMLElement, PanZoomOptions | undefined> = (node
     const rect = node.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
+    const centerX = node.clientWidth / 2;
+    const centerY = node.clientHeight / 2;
+    const dx = mouseX - centerX;
+    const dy = mouseY - centerY;
 
     const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
     const newScale = Math.min(Math.max(scale * zoomFactor, minScale), maxScale);
 
-    // Zoom toward mouse pointer
-    x = mouseX - (mouseX - x) * (newScale / scale);
-    y = mouseY - (mouseY - y) * (newScale / scale);
+    // Zoom toward mouse pointer relative to center
+    x = dx - (dx - x) * (newScale / scale);
+    y = dy - (dy - y) * (newScale / scale);
     scale = newScale;
 
     applyTransform();
@@ -90,19 +94,15 @@ export const usePanZoom: Action<HTMLElement, PanZoomOptions | undefined> = (node
   const controller: PanZoomController = {
     zoomIn() {
       const newScale = Math.min(scale * 1.25, maxScale);
-      const centerX = node.clientWidth / 2;
-      const centerY = node.clientHeight / 2;
-      x = centerX - (centerX - x) * (newScale / scale);
-      y = centerY - (centerY - y) * (newScale / scale);
+      x = x * (newScale / scale);
+      y = y * (newScale / scale);
       scale = newScale;
       applyTransform();
     },
     zoomOut() {
       const newScale = Math.max(scale * 0.8, minScale);
-      const centerX = node.clientWidth / 2;
-      const centerY = node.clientHeight / 2;
-      x = centerX - (centerX - x) * (newScale / scale);
-      y = centerY - (centerY - y) * (newScale / scale);
+      x = x * (newScale / scale);
+      y = y * (newScale / scale);
       scale = newScale;
       applyTransform();
     },
@@ -117,17 +117,19 @@ export const usePanZoom: Action<HTMLElement, PanZoomOptions | undefined> = (node
       if (!target) return;
       const containerWidth = node.clientWidth;
       const containerHeight = node.clientHeight;
-      const targetRect = target.getBoundingClientRect();
+      if (containerWidth === 0 || containerHeight === 0) return;
 
-      const unscaledWidth = targetRect.width / scale || 600;
-      const unscaledHeight = targetRect.height / scale || 400;
+      const targetRect = target.getBoundingClientRect();
+      const unscaledWidth = targetRect.width / scale || target.offsetWidth || 600;
+      const unscaledHeight = targetRect.height / scale || target.offsetHeight || 400;
 
       const scaleX = (containerWidth * 0.85) / unscaledWidth;
       const scaleY = (containerHeight * 0.85) / unscaledHeight;
       scale = Math.min(Math.max(Math.min(scaleX, scaleY), minScale), 1.5);
 
-      x = (containerWidth - unscaledWidth * scale) / 2;
-      y = (containerHeight - unscaledHeight * scale) / 2;
+      // Dead center
+      x = 0;
+      y = 0;
       applyTransform();
     },
   };

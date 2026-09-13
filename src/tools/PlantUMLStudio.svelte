@@ -428,13 +428,13 @@
 
         <!-- SVG Container with Pan & Zoom -->
         <div
-          class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-4 select-none"
+          class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center select-none"
           use:usePanZoom={{
             onRegister: (ctrl) => (panZoomCtrl = ctrl),
           }}
         >
           <!-- The target manipulated by panzoom -->
-          <div class="w-full h-full flex items-center justify-center pointer-events-auto">
+          <div class="flex items-center justify-center pointer-events-auto">
             <div
               bind:this={svgContainerRef}
               class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-2 {isDark ? 'bg-zinc-900/50 shadow-inner' : 'bg-white shadow-xs'}"
