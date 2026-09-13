@@ -159,5 +159,109 @@ export const SAMPLES = {
         string type
         string syntax_code
         timestamp updated_at
-    }`
+    }`,
+
+  plantumlSequence: `@startuml
+autonumber
+actor Client
+participant "API Gateway" as Gateway
+participant "Auth Service" as Auth
+database "PostgreSQL" as DB
+
+Client -> Gateway: POST /api/v1/login {email, password}
+activate Gateway
+Gateway -> Auth: Authenticate(credentials)
+activate Auth
+
+Auth -> DB: Query user by email
+activate DB
+DB --> Auth: User record + hashed pass
+deactivate DB
+
+Auth -> Auth: Verify password hash
+alt Valid Credentials
+    Auth --> Gateway: 200 OK + JWT Access Token
+    Gateway --> Client: 200 OK + Token Cookie
+else Invalid Credentials
+    Auth --> Gateway: 401 Unauthorized
+    Gateway --> Client: 401 Unauthorized {error}
+end
+
+deactivate Auth
+deactivate Gateway
+@enduml`,
+
+  plantumlUseCase: `@startuml
+left to right direction
+actor "Developer" as dev
+actor "Admin" as admin
+
+rectangle "devtools Application" {
+  usecase "Format & Minify JSON" as UC1
+  usecase "View Collapsible JSON Tree" as UC2
+  usecase "Generate JSON Schema & Types" as UC3
+  usecase "Side-by-Side Diff Check" as UC4
+  usecase "Render Mermaid & PlantUML" as UC5
+  usecase "Export SVG and High-Res PNG" as UC6
+  usecase "Manage Deployments" as UC7
+}
+
+dev --> UC1
+dev --> UC2
+dev --> UC3
+dev --> UC4
+dev --> UC5
+dev --> UC6
+
+admin --> UC7
+@enduml`,
+
+  plantumlComponent: `@startuml
+package "Client Browser" {
+  [Svelte 5 App Rail] as App
+  [Monaco Code Editor] as Monaco
+  [PlantUML Studio] as Studio
+  [PanZoom Viewport] as Viewport
+}
+
+cloud "PlantUML Public Cloud" {
+  [SVG Renderer Service] as CloudService
+}
+
+node "Local Persistence" {
+  database "localStorage" as Cache
+}
+
+App --> Monaco : embed
+App --> Studio : route #/plantuml
+Studio --> Viewport : interactive render
+Studio --> Cache : save drafts
+Studio ..> CloudService : GET /plantuml/svg/~1...
+@enduml`,
+
+  plantumlClass: `@startuml
+abstract class Tool {
+  +String id
+  +String name
+  +String route
+  +render()
+}
+
+class JsonFormatter extends Tool {
+  +indent(spaces: Int)
+  +minify()
+}
+
+class DiffChecker extends Tool {
+  +Boolean sideBySide
+  +swap()
+}
+
+class PlantUMLStudio extends Tool {
+  +String serverUrl
+  +encodeDSL(code: String)
+  +exportSvg()
+  +exportPng()
+}
+@enduml`
 };

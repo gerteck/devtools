@@ -1,4 +1,4 @@
-export type Route = '/' | '/json' | '/diff' | '/mermaid';
+export type Route = '/' | '/json' | '/diff' | '/mermaid' | '/plantuml';
 
 export type ColorScheme = 'default' | 'gruvbox' | 'catppuccin' | 'nord';
 export type ThemeMode = 'dark' | 'light';

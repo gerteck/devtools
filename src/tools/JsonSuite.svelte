@@ -3,6 +3,7 @@
   import JsonTreeView from '../components/JsonTreeView.svelte';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
+  import { generateJsonSchema, generateTypeScriptTypes } from '../utils/schemaGenerator';
   import type { JsonError } from '../types';
   import {
     Copy,
@@ -13,20 +14,24 @@
     Network,
     AlertCircle,
     CheckCircle2,
+    FileJson,
+    CodeXml,
+    Download,
   } from '@lucide/svelte';
 
   let {
     initialTab = 'editor',
     theme = 'devtools-dark',
   }: {
-    initialTab?: 'editor' | 'tree';
+    initialTab?: 'editor' | 'tree' | 'schema' | 'typescript';
     theme?: string;
   } = $props();
 
-  let activeTab = $state<'editor' | 'tree'>('editor');
+  let activeTab = $state<'editor' | 'tree' | 'schema' | 'typescript'>('editor');
   $effect(() => {
     activeTab = initialTab;
   });
+
   let indentSpaces = $state<2 | 4>(2);
   let copied = $state(false);
 
@@ -91,6 +96,19 @@
     }
   });
 
+  // Generated artifacts
+  const generatedSchema = $derived(
+    parsedJson !== null
+      ? generateJsonSchema(parsedJson)
+      : '// Provide valid JSON in the Editor to generate JSON Schema'
+  );
+
+  const generatedTypes = $derived(
+    parsedJson !== null
+      ? generateTypeScriptTypes(parsedJson)
+      : '// Provide valid JSON in the Editor to generate TypeScript interfaces'
+  );
+
   function formatJson(spaces: 2 | 4 = indentSpaces) {
     if (!rawJson.trim()) return;
     try {
@@ -111,10 +129,22 @@
     }
   }
 
-  function copyJson() {
-    navigator.clipboard.writeText(rawJson);
+  function copyText(content: string) {
+    navigator.clipboard.writeText(content);
     copied = true;
     setTimeout(() => (copied = false), 1500);
+  }
+
+  function downloadFile(content: string, filename: string, mimeType: string) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function clearJson() {
@@ -129,7 +159,7 @@
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Toolbar Header -->
   <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
-    <!-- Tab Switcher: Editor vs Tree View -->
+    <!-- Tab Switcher: Editor | Tree View | JSON Schema | TypeScript -->
     <div class="flex items-center gap-1 bg-surface-container p-0.5 rounded-lg border border-outline-variant">
       <button
         onclick={() => (activeTab = 'editor')}
@@ -150,62 +180,128 @@
         <Network size={14} />
         <span>Tree View</span>
       </button>
+
+      <button
+        onclick={() => (activeTab = 'schema')}
+        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'schema'
+          ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+          : 'text-on-surface-variant hover:text-on-surface'}"
+      >
+        <FileJson size={14} />
+        <span>JSON Schema</span>
+      </button>
+
+      <button
+        onclick={() => (activeTab = 'typescript')}
+        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'typescript'
+          ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+          : 'text-on-surface-variant hover:text-on-surface'}"
+      >
+        <CodeXml size={14} />
+        <span>TypeScript</span>
+      </button>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center gap-2">
-      <button
-        onclick={loadSample}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-        title="Load sample JSON"
-      >
-        <Sparkles size={12} />
-        <span>Sample</span>
-      </button>
-
-      <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
+      {#if activeTab === 'editor' || activeTab === 'tree'}
         <button
-          onclick={() => { indentSpaces = 2; formatJson(2); }}
-          class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+          onclick={loadSample}
+          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          title="Load sample JSON"
         >
-          2 sp
+          <Sparkles size={12} />
+          <span>Sample</span>
         </button>
-        <div class="w-px h-3.5 bg-outline-variant"></div>
+
+        <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
+          <button
+            onclick={() => { indentSpaces = 2; formatJson(2); }}
+            class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+          >
+            2 sp
+          </button>
+          <div class="w-px h-3.5 bg-outline-variant"></div>
+          <button
+            onclick={() => { indentSpaces = 4; formatJson(4); }}
+            class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+          >
+            4 sp
+          </button>
+        </div>
+
         <button
-          onclick={() => { indentSpaces = 4; formatJson(4); }}
-          class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+          onclick={minifyJson}
+          class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         >
-          4 sp
+          Minify
         </button>
-      </div>
 
-      <button
-        onclick={minifyJson}
-        class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-      >
-        Minify
-      </button>
+        <button
+          onclick={() => copyText(rawJson)}
+          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        >
+          {#if copied}
+            <Check size={12} class="text-secondary" />
+            <span>Copied!</span>
+          {:else}
+            <Copy size={12} />
+            <span>Copy</span>
+          {/if}
+        </button>
 
-      <button
-        onclick={copyJson}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-      >
-        {#if copied}
-          <Check size={12} class="text-secondary" />
-          <span>Copied!</span>
-        {:else}
-          <Copy size={12} />
-          <span>Copy</span>
-        {/if}
-      </button>
+        <button
+          onclick={clearJson}
+          class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
+          title="Clear Input"
+        >
+          <Trash2 size={14} />
+        </button>
 
-      <button
-        onclick={clearJson}
-        class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
-        title="Clear Input"
-      >
-        <Trash2 size={14} />
-      </button>
+      {:else if activeTab === 'schema'}
+        <button
+          onclick={() => copyText(generatedSchema)}
+          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        >
+          {#if copied}
+            <Check size={12} class="text-secondary" />
+            <span>Copied!</span>
+          {:else}
+            <Copy size={12} />
+            <span>Copy Schema</span>
+          {/if}
+        </button>
+
+        <button
+          onclick={() => downloadFile(generatedSchema, 'schema.json', 'application/json')}
+          class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+        >
+          <Download size={13} />
+          <span>Download .json</span>
+        </button>
+
+      {:else if activeTab === 'typescript'}
+        <button
+          onclick={() => copyText(generatedTypes)}
+          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        >
+          {#if copied}
+            <Check size={12} class="text-secondary" />
+            <span>Copied!</span>
+          {:else}
+            <Copy size={12} />
+            <span>Copy Types</span>
+          {/if}
+        </button>
+
+        <button
+          onclick={() => downloadFile(generatedTypes, 'types.ts', 'text/typescript')}
+          class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+        >
+          <Download size={13} />
+          <span>Download .ts</span>
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -244,6 +340,30 @@
           </div>
         {/if}
       </div>
+
+    {:else if activeTab === 'schema'}
+      <!-- Generated JSON Schema View -->
+      <div
+        class="flex-1 w-full h-full"
+        use:useMonacoEditor={{
+          value: generatedSchema,
+          language: 'json',
+          theme: theme,
+          readOnly: true,
+        }}
+      ></div>
+
+    {:else if activeTab === 'typescript'}
+      <!-- Generated TypeScript Types View -->
+      <div
+        class="flex-1 w-full h-full"
+        use:useMonacoEditor={{
+          value: generatedTypes,
+          language: 'typescript',
+          theme: theme,
+          readOnly: true,
+        }}
+      ></div>
     {/if}
 
     <!-- Parsing Error Status Bar -->

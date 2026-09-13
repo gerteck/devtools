@@ -7,6 +7,7 @@
   import JsonSuite from './tools/JsonSuite.svelte';
   import DiffChecker from './tools/DiffChecker.svelte';
   import MermaidStudio from './tools/MermaidStudio.svelte';
+  import PlantUMLStudio from './tools/PlantUMLStudio.svelte';
   import type { ColorScheme, ThemeMode } from './types';
   import { getMonacoThemeName } from './utils/monaco';
 
@@ -53,6 +54,9 @@
       } else if (e.key === '3') {
         e.preventDefault();
         router.navigate('/mermaid');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        router.navigate('/plantuml');
       } else if (e.key === '0' || e.key.toLowerCase() === 'h') {
         e.preventDefault();
         router.navigate('/');
@@ -86,6 +90,8 @@
         <DiffChecker theme={monacoTheme} />
       {:else if router.currentRoute === '/mermaid'}
         <MermaidStudio {scheme} theme={mode} {monacoTheme} />
+      {:else if router.currentRoute === '/plantuml'}
+        <PlantUMLStudio {scheme} theme={mode} {monacoTheme} />
       {/if}
     </main>
   </div>

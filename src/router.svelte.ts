@@ -34,6 +34,17 @@ export const TOOLS: ToolItem[] = [
     shortcutLabel: '⌘3',
     icon: 'hub',
   },
+  {
+    id: 'plantuml',
+    name: 'PlantUML Studio',
+    version: 'v1.0',
+    description: 'Component, sequence, and class diagrams with cloud encoding, pan-zoom viewer, and high-res export.',
+    tag: 'UML / Cloud',
+    route: '/plantuml',
+    shortcutKey: '4',
+    shortcutLabel: '⌘4',
+    icon: 'network',
+  },
 ];
 
 class Router {
@@ -50,7 +61,7 @@ class Router {
   private getRouteFromHash(): Route {
     if (typeof window === 'undefined') return '/';
     const hash = window.location.hash.replace(/^#/, '');
-    if (hash === '/json' || hash === '/diff' || hash === '/mermaid') {
+    if (hash === '/json' || hash === '/diff' || hash === '/mermaid' || hash === '/plantuml') {
       return hash;
     }
     return '/';

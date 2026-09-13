@@ -125,6 +125,103 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'mermaid')) {
       whitespace: [[/[ \t\r\n]+/, 'white']],
     },
   });
+}
+
+// Register custom PlantUML syntax language in Monaco
+if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
+  monaco.languages.register({ id: 'plantuml' });
+
+  monaco.languages.setMonarchTokensProvider('plantuml', {
+    defaultToken: '',
+    tokenPostfix: '.plantuml',
+
+    keywords: [
+      '@startuml',
+      '@enduml',
+      'actor',
+      'participant',
+      'boundary',
+      'control',
+      'entity',
+      'database',
+      'collections',
+      'queue',
+      'class',
+      'interface',
+      'abstract',
+      'enum',
+      'package',
+      'node',
+      'folder',
+      'frame',
+      'cloud',
+      'component',
+      'state',
+      'note',
+      'left',
+      'right',
+      'of',
+      'over',
+      'as',
+      'autonumber',
+      'title',
+      'header',
+      'footer',
+      'legend',
+      'alt',
+      'else',
+      'opt',
+      'loop',
+      'par',
+      'break',
+      'critical',
+      'group',
+      'box',
+      'end',
+      'skinparam',
+      'hide',
+      'show',
+      'activate',
+      'deactivate',
+      'return',
+      'destroy',
+    ],
+
+    operators: ['->', '-->', '<--', '<-', '->>', '-->>', '..>', '<..', '*--', 'o--', '--', '=='],
+
+    tokenizer: {
+      root: [
+        // Comments
+        [/'[^'\n]*$/, 'comment'],
+        [/\/'[\s\S]*?'\//, 'comment'],
+
+        // Strings
+        [/"([^"\\]|\\.)*"/, 'string'],
+
+        // Directives
+        [/^!.*$/, 'meta'],
+
+        // Keywords
+        [
+          /[@a-zA-Z_][\w-]*/,
+          {
+            cases: {
+              '@keywords': 'keyword',
+              '@default': 'identifier',
+            },
+          },
+        ],
+
+        // Arrows & Operators
+        [/[-><=.*o:]{1,4}/, 'operator'],
+
+        // Whitespace
+        { include: '@whitespace' },
+      ],
+
+      whitespace: [[/[ \t\r\n]+/, 'white']],
+    },
+  });
 
   // --- THEMES ---
 

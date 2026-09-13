@@ -1,6 +1,6 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
-  import { Search, ArrowRight, Braces, GitCompare, Workflow } from '@lucide/svelte';
+  import { Search, ArrowRight, Braces, GitCompare, Workflow, Network } from '@lucide/svelte';
 
   let searchQuery = $state('');
   let searchInputRef: HTMLInputElement | null = null;
@@ -27,6 +27,8 @@
   function getToolIcon(id: string) {
     if (id === 'json') return Braces;
     if (id === 'diff') return GitCompare;
+    if (id === 'mermaid') return Workflow;
+    if (id === 'plantuml') return Network;
     return Workflow;
   }
 </script>
@@ -66,7 +68,7 @@
   </div>
 
   <!-- Tools Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     {#each filteredTools as tool}
       {@const IconComponent = getToolIcon(tool.id)}
       <div

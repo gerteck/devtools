@@ -3,8 +3,11 @@
  */
 
 export function downloadSvg(svgElement: SVGSVGElement, filename = 'diagram.svg') {
+  const clone = svgElement.cloneNode(true) as SVGSVGElement;
+  clone.removeAttribute('style');
+
   const serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svgElement);
+  let source = serializer.serializeToString(clone);
 
   // Add namespaces if missing
   if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
@@ -27,16 +30,62 @@ export function downloadPng(
   scale = 2,
   backgroundColor = '#121215'
 ) {
-  const serializer = new XMLSerializer();
-  const source = serializer.serializeToString(svgElement);
+  // 1. Clone the SVG so we don't mutate the live DOM element
+  const clone = svgElement.cloneNode(true) as SVGSVGElement;
+  clone.removeAttribute('style');
 
-  const bbox = svgElement.getBoundingClientRect();
-  const width = (bbox.width || 800) * scale;
-  const height = (bbox.height || 600) * scale;
+  // 2. Determine intrinsic vector dimensions from viewBox or getBBox
+  let intrinsicWidth = 0;
+  let intrinsicHeight = 0;
+
+  const viewBoxAttr = svgElement.getAttribute('viewBox');
+  if (viewBoxAttr) {
+    const parts = viewBoxAttr.trim().split(/[\s,]+/).map(parseFloat);
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      intrinsicWidth = parts[2];
+      intrinsicHeight = parts[3];
+      clone.setAttribute('viewBox', `${parts[0]} ${parts[1]} ${parts[2]} ${parts[3]}`);
+    }
+  }
+
+  if (!intrinsicWidth || !intrinsicHeight) {
+    try {
+      const bbox = svgElement.getBBox();
+      if (bbox.width > 0 && bbox.height > 0) {
+        intrinsicWidth = bbox.width;
+        intrinsicHeight = bbox.height;
+        clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+      }
+    } catch {
+      // getBBox might fail if offscreen or detached
+    }
+  }
+
+  if (!intrinsicWidth || !intrinsicHeight) {
+    intrinsicWidth = svgElement.clientWidth || 800;
+    intrinsicHeight = svgElement.clientHeight || 600;
+  }
+
+  // Set explicit pixel dimensions on the clone matching its natural aspect ratio
+  clone.setAttribute('width', `${intrinsicWidth}`);
+  clone.setAttribute('height', `${intrinsicHeight}`);
+
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(clone);
+
+  if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  if (!source.match(/^<svg[^>]+xmlns:xlink="http\:\/\/www\.w3\.org\/1999\/xlink"/)) {
+    source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  }
+
+  const canvasWidth = Math.round(intrinsicWidth * scale);
+  const canvasHeight = Math.round(intrinsicHeight * scale);
 
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
   const ctx = canvas.getContext('2d');
 
   if (!ctx) return;
@@ -46,12 +95,14 @@ export function downloadPng(
   const url = URL.createObjectURL(svgBlob);
 
   img.onload = () => {
-    // Fill background
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
+    // Fill background color
+    if (backgroundColor && backgroundColor !== 'transparent') {
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
 
-    // Draw SVG scaled up
-    ctx.drawImage(img, 0, 0, width, height);
+    // Draw SVG onto canvas scaled up cleanly
+    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
     URL.revokeObjectURL(url);
 
     canvas.toBlob((blob) => {
@@ -59,6 +110,11 @@ export function downloadPng(
         triggerDownload(URL.createObjectURL(blob), filename);
       }
     }, 'image/png');
+  };
+
+  img.onerror = (err) => {
+    console.error('Failed to render SVG image on canvas for PNG export:', err);
+    URL.revokeObjectURL(url);
   };
 
   img.src = url;

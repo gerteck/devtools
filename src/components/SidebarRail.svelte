@@ -1,7 +1,7 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
   import type { Route } from '../types';
-  import { Braces, GitCompare, Workflow, LayoutGrid } from '@lucide/svelte';
+  import { Braces, GitCompare, Workflow, LayoutGrid, Network } from '@lucide/svelte';
 
   let { currentRoute }: { currentRoute: Route } = $props();
 
@@ -10,6 +10,7 @@
     { route: '/json' as Route, label: 'JSON Formatter', icon: Braces, shortcut: '⌘1' },
     { route: '/diff' as Route, label: 'Diff Checker', icon: GitCompare, shortcut: '⌘2' },
     { route: '/mermaid' as Route, label: 'Mermaid Studio', icon: Workflow, shortcut: '⌘3' },
+    { route: '/plantuml' as Route, label: 'PlantUML Studio', icon: Network, shortcut: '⌘4' },
   ];
 </script>
 
