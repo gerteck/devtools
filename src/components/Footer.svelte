@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Star } from '@lucide/svelte';
+
   let showShortcutsModal = $state(false);
 
   const shortcuts = [
@@ -23,9 +25,11 @@
       href="https://github.com/gerteck/devtools/"
       target="_blank"
       rel="noreferrer"
-      class="hover:text-on-surface transition-colors"
+      class="inline-flex items-center gap-1 hover:text-on-surface transition-colors group"
+      title="Star devtools on GitHub"
     >
-      github
+      <Star size={11} class="text-amber-500 fill-amber-500/30 group-hover:fill-amber-500 transition-colors" />
+      <span>star on github</span>
     </a>
   </div>
 </footer>

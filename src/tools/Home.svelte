@@ -1,6 +1,16 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
-  import { Search, ArrowRight, Braces, GitCompare, Workflow, Network, Database } from '@lucide/svelte';
+  import {
+    Search,
+    ArrowRight,
+    Braces,
+    GitCompare,
+    Workflow,
+    Network,
+    Database,
+    Star,
+    ExternalLink,
+  } from '@lucide/svelte';
 
   let searchQuery = $state('');
   let searchInputRef: HTMLInputElement | null = null;
@@ -39,7 +49,20 @@
 <div class="w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-6 py-10 md:py-14 flex-1 flex flex-col justify-center">
   <!-- Hero Section -->
   <div class="text-left max-w-2xl mb-8 w-full">
-    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface mb-2 font-mono">devtools</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface font-mono">devtools</h1>
+      <a
+        href="https://github.com/gerteck/devtools"
+        target="_blank"
+        rel="noreferrer"
+        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-surface border border-outline-variant hover:border-amber-500/40 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all group shadow-2xs"
+        title="Star devtools on GitHub"
+      >
+        <Star size={13} class="text-amber-500 fill-amber-500/25 group-hover:fill-amber-500 transition-colors" />
+        <span>Star on GitHub if you found it useful</span>
+        <ExternalLink size={12} class="opacity-50 group-hover:opacity-100 transition-opacity" />
+      </a>
+    </div>
     <p class="text-sm text-on-surface-variant font-normal leading-relaxed">
       A small collection of lightweight everyday tools for web development.
     </p>
