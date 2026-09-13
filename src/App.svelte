@@ -8,6 +8,7 @@
   import DiffChecker from './tools/DiffChecker.svelte';
   import MermaidStudio from './tools/MermaidStudio.svelte';
   import PlantUMLStudio from './tools/PlantUMLStudio.svelte';
+import SqliteViewer from './tools/SqliteViewer.svelte';
   import type { ColorScheme, ThemeMode } from './types';
   import { getMonacoThemeName } from './utils/monaco';
 
@@ -57,6 +58,9 @@
       } else if (e.key === '4') {
         e.preventDefault();
         router.navigate('/plantuml');
+      } else if (e.key === '5') {
+        e.preventDefault();
+        router.navigate('/sqlite');
       } else if (e.key === '0' || e.key.toLowerCase() === 'h') {
         e.preventDefault();
         router.navigate('/');
@@ -92,6 +96,8 @@
         <MermaidStudio {scheme} theme={mode} {monacoTheme} />
       {:else if router.currentRoute === '/plantuml'}
         <PlantUMLStudio {scheme} theme={mode} {monacoTheme} />
+      {:else if router.currentRoute === '/sqlite'}
+        <SqliteViewer theme={monacoTheme} />
       {/if}
     </main>
   </div>
