@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useMonacoEditor } from '../actions/useMonacoEditor';
   import JsonTreeView from '../components/JsonTreeView.svelte';
+  import JsonTableView from '../components/JsonTableView.svelte';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
   import { generateJsonSchema, generateTypeScriptTypes } from '../utils/schemaGenerator';
@@ -12,6 +13,7 @@
     Sparkles,
     Braces,
     Network,
+    Table2,
     AlertCircle,
     CheckCircle2,
     FileJson,
@@ -24,11 +26,11 @@
     initialTab = 'editor',
     theme = 'devtools-dark',
   }: {
-    initialTab?: 'editor' | 'tree' | 'schema' | 'typescript';
+    initialTab?: 'editor' | 'tree' | 'table' | 'schema' | 'typescript';
     theme?: string;
   } = $props();
 
-  let activeTab = $state<'editor' | 'tree' | 'schema' | 'typescript'>('editor');
+  let activeTab = $state<'editor' | 'tree' | 'table' | 'schema' | 'typescript'>('editor');
   $effect(() => {
     activeTab = initialTab;
   });
@@ -188,6 +190,17 @@
       </button>
 
       <button
+        onclick={() => (activeTab = 'table')}
+        class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'table'
+          ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+          : 'text-on-surface-variant hover:text-on-surface'}"
+      >
+        <Table2 size={13} />
+        <span class="hidden sm:inline">Table View</span>
+        <span class="sm:hidden text-[11px]">Table</span>
+      </button>
+
+      <button
         onclick={() => (activeTab = 'schema')}
         class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'schema'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
@@ -212,7 +225,7 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-      {#if activeTab === 'editor' || activeTab === 'tree'}
+      {#if activeTab === 'editor' || activeTab === 'tree' || activeTab === 'table'}
         <button
           onclick={loadSample}
           class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
@@ -377,6 +390,26 @@
           </div>
         {/if}
       </div>
+
+    {:else if activeTab === 'table'}
+      <!-- Classic / Modern HTML Table Visualizer -->
+      {#if jsonError}
+        <div class="flex-1 overflow-auto p-6 bg-surface">
+          <div class="max-w-xl mx-auto p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-start gap-3 font-mono text-xs">
+            <AlertCircle size={16} class="shrink-0 mt-0.5" />
+            <div>
+              <p class="font-semibold mb-1">Cannot render Table View: Invalid JSON</p>
+              <p class="text-rose-400">{jsonError.message}</p>
+            </div>
+          </div>
+        </div>
+      {:else if parsedJson !== null}
+        <JsonTableView data={parsedJson} />
+      {:else}
+        <div class="flex-1 flex items-center justify-center p-6 bg-surface text-center font-mono text-xs text-on-surface-variant">
+          Enter or paste JSON in the Editor tab to visualize table structure.
+        </div>
+      {/if}
 
     {:else if activeTab === 'schema'}
       <!-- Generated JSON Schema View -->
