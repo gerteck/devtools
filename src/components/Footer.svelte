@@ -7,6 +7,15 @@
 
   $effect(() => {
     footerHidden.value = isHidden;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('resize'));
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
+    }
   });
 
   let showShortcutsModal = $state(false);

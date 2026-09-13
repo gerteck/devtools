@@ -81,7 +81,7 @@
   <div class="flex-1 flex min-h-0 overflow-hidden">
     <SidebarRail currentRoute={router.currentRoute} />
 
-    <main class="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto bg-background">
+    <main class="flex-1 flex flex-col min-w-0 min-h-0 {router.currentRoute === '/' ? 'overflow-y-auto' : 'overflow-hidden'} bg-background">
       {#if router.currentRoute === '/'}
         <Home />
       {:else if router.currentRoute === '/json'}

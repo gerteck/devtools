@@ -356,11 +356,11 @@
   </div>
 
   <!-- Content Workspace -->
-  <div class="flex-1 min-h-0 relative flex flex-col overflow-hidden">
+  <div class="flex-1 min-h-0 relative w-full overflow-hidden">
     {#if activeTab === 'editor'}
       <!-- Monaco Editor View -->
       <div
-        class="flex-1 w-full h-full"
+        class="w-full h-full"
         use:useMonacoEditor={{
           value: rawJson,
           language: 'json',
@@ -371,7 +371,7 @@
 
     {:else if activeTab === 'tree'}
       <!-- Interactive Tree View -->
-      <div class="flex-1 overflow-auto p-6 bg-surface">
+      <div class="w-full h-full overflow-auto p-6 bg-surface">
         {#if jsonError}
           <div class="max-w-xl mx-auto p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-start gap-3 font-mono text-xs">
             <AlertCircle size={16} class="shrink-0 mt-0.5" />
@@ -394,7 +394,7 @@
     {:else if activeTab === 'table'}
       <!-- Classic / Modern HTML Table Visualizer -->
       {#if jsonError}
-        <div class="flex-1 overflow-auto p-6 bg-surface">
+        <div class="w-full h-full overflow-auto p-6 bg-surface">
           <div class="max-w-xl mx-auto p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-start gap-3 font-mono text-xs">
             <AlertCircle size={16} class="shrink-0 mt-0.5" />
             <div>
@@ -404,9 +404,11 @@
           </div>
         </div>
       {:else if parsedJson !== null}
-        <JsonTableView data={parsedJson} />
+        <div class="w-full h-full overflow-hidden">
+          <JsonTableView data={parsedJson} />
+        </div>
       {:else}
-        <div class="flex-1 flex items-center justify-center p-6 bg-surface text-center font-mono text-xs text-on-surface-variant">
+        <div class="w-full h-full flex items-center justify-center p-6 bg-surface text-center font-mono text-xs text-on-surface-variant">
           Enter or paste JSON in the Editor tab to visualize table structure.
         </div>
       {/if}
@@ -414,7 +416,7 @@
     {:else if activeTab === 'schema'}
       <!-- Generated JSON Schema View -->
       <div
-        class="flex-1 w-full h-full"
+        class="w-full h-full"
         use:useMonacoEditor={{
           value: generatedSchema,
           language: 'json',
@@ -426,7 +428,7 @@
     {:else if activeTab === 'typescript'}
       <!-- Generated TypeScript Types View -->
       <div
-        class="flex-1 w-full h-full"
+        class="w-full h-full"
         use:useMonacoEditor={{
           value: generatedTypes,
           language: 'typescript',
@@ -435,32 +437,32 @@
         }}
       ></div>
     {/if}
-
-    <!-- Parsing Error Status Bar -->
-    {#if jsonError}
-      <div class="border-t border-rose-500/30 bg-rose-500/10 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-600 dark:text-rose-400 shrink-0">
-        <div class="flex items-center gap-2">
-          <AlertCircle size={14} class="shrink-0" />
-          <span class="font-semibold">JSON Syntax Error:</span>
-          <span>{jsonError.message}</span>
-        </div>
-        {#if jsonError.line !== undefined}
-          <span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-[11px] font-bold">
-            Line {jsonError.line}, Col {jsonError.column}
-          </span>
-        {/if}
-      </div>
-    {:else if rawJson.trim()}
-      <div class="border-t border-outline-variant bg-surface px-4 py-1.5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant shrink-0">
-        <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 size={13} />
-          <span>Valid JSON</span>
-        </div>
-        <div class="flex items-center gap-4">
-          <span>{new Blob([rawJson]).size} bytes</span>
-          <span>{rawJson.split('\n').length} lines</span>
-        </div>
-      </div>
-    {/if}
   </div>
+
+  <!-- Parsing Error Status Bar -->
+  {#if jsonError}
+    <div class="border-t border-rose-500/30 bg-rose-500/10 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-600 dark:text-rose-400 shrink-0">
+      <div class="flex items-center gap-2">
+        <AlertCircle size={14} class="shrink-0" />
+        <span class="font-semibold">JSON Syntax Error:</span>
+        <span>{jsonError.message}</span>
+      </div>
+      {#if jsonError.line !== undefined}
+        <span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-[11px] font-bold">
+          Line {jsonError.line}, Col {jsonError.column}
+        </span>
+      {/if}
+    </div>
+  {:else if rawJson.trim()}
+    <div class="border-t border-outline-variant bg-surface px-4 py-1.5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant shrink-0">
+      <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+        <CheckCircle2 size={13} />
+        <span>Valid JSON</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span>{new Blob([rawJson]).size} bytes</span>
+        <span>{rawJson.split('\n').length} lines</span>
+      </div>
+    </div>
+  {/if}
 </div>
