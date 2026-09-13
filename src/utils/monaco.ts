@@ -136,8 +136,6 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
     tokenPostfix: '.plantuml',
 
     keywords: [
-      '@startuml',
-      '@enduml',
       'actor',
       'participant',
       'boundary',
@@ -198,12 +196,13 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
         // Strings
         [/"([^"\\]|\\.)*"/, 'string'],
 
-        // Directives
+        // Directives and headers
         [/^!.*$/, 'meta'],
+        [/@@(startuml|enduml)/, 'keyword'],
 
-        // Keywords
+        // Keywords and identifiers
         [
-          /[@a-zA-Z_][\w-]*/,
+          /[a-zA-Z_][\w-]*/,
           {
             cases: {
               '@keywords': 'keyword',
@@ -222,12 +221,13 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
       whitespace: [[/[ \t\r\n]+/, 'white']],
     },
   });
+}
 
-  // --- THEMES ---
+// --- THEMES ---
 
-  // 1. Default (Zinc) Dark
-  const defaultDarkDef: monaco.editor.IStandaloneThemeData = {
-    base: 'vs-dark',
+// 1. Default (Zinc) Dark
+const defaultDarkDef: monaco.editor.IStandaloneThemeData = {
+  base: 'vs-dark',
     inherit: true,
     rules: [
       { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
@@ -420,7 +420,6 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
       'editor.selectionBackground': '#eceff4',
     },
   });
-}
 
 export function getMonacoThemeName(scheme: ColorScheme, mode: ThemeMode): string {
   return `theme-${scheme}-${mode}`;
