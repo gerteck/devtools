@@ -67,7 +67,7 @@
 
     <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface font-mono mb-2">devtools</h1>
     <p class="text-sm text-on-surface-variant font-normal leading-relaxed">
-      A small collection of lightweight everyday tools for web development.
+      A small collection of lightweight tools for development. No ads, just utility. No need to log in to generate a diagram or view a diff...
     </p>
 
     <!-- Search Input -->
