@@ -106,6 +106,45 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       getLineChanges: () => diffEditor.getLineChanges(),
     });
   }
+  const originalEditor = diffEditor.getOriginalEditor();
+  const modifiedEditor = diffEditor.getModifiedEditor();
+
+  // Helper to select all text in a specific editor
+  const selectAllInEditor = (ed: monaco.editor.ICodeEditor) => {
+    const model = ed.getModel();
+    if (model) {
+      ed.focus();
+      ed.setSelection(model.getFullModelRange());
+    }
+  };
+
+  // Bind Ctrl+A / Cmd+A command explicitly to both inner code editors
+  originalEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {
+    selectAllInEditor(originalEditor);
+  });
+  modifiedEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {
+    selectAllInEditor(modifiedEditor);
+  });
+
+  // Also capture keyboard Ctrl+A / Cmd+A at DOM container level to ensure reliable selection
+  const handleKeydown = (e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'a' || e.key === 'A')) {
+      const origDom = originalEditor.getDomNode();
+      const modDom = modifiedEditor.getDomNode();
+      const activeEl = document.activeElement;
+
+      if (originalEditor.hasTextFocus() || (origDom && activeEl && origDom.contains(activeEl))) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectAllInEditor(originalEditor);
+      } else if (modifiedEditor.hasTextFocus() || (modDom && activeEl && modDom.contains(activeEl))) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectAllInEditor(modifiedEditor);
+      }
+    }
+  };
+  node.addEventListener('keydown', handleKeydown, true);
 
   const resizeObserver = new ResizeObserver(() => {
     diffEditor.layout();
@@ -155,6 +194,7 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
     },
     destroy() {
       try {
+        node.removeEventListener('keydown', handleKeydown, true);
         resizeObserver.disconnect();
         origDisposable.dispose();
         modDisposable.dispose();

@@ -71,7 +71,7 @@ import SqliteViewer from './tools/SqliteViewer.svelte';
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="h-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden select-none transition-colors duration-200">
+<div class="h-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden transition-colors duration-200">
   <!-- Top Navigation Header -->
   <Header
     {scheme}
