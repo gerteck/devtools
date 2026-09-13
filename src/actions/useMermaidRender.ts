@@ -5,6 +5,7 @@ import type { ColorScheme, ThemeMode } from '../types';
 
 export interface MermaidRenderOptions {
   code: string;
+  config?: string;
   scheme?: ColorScheme;
   theme?: ThemeMode;
   onError?: (err: Error | null) => void;
@@ -16,7 +17,11 @@ let renderIdCounter = 0;
 export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node, initialOptions) => {
   let options = initialOptions;
 
-  function initMermaid(scheme: ColorScheme = 'default', mode: ThemeMode = 'dark') {
+  function initMermaid(
+    scheme: ColorScheme = 'default',
+    mode: ThemeMode = 'dark',
+    customConfigStr?: string
+  ) {
     let themeVars: Record<string, any>;
 
     if (scheme === 'gruvbox') {
@@ -102,14 +107,39 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
           };
     }
 
-    mermaid.initialize({
+    let userConfig: Record<string, any> = {};
+    if (customConfigStr && customConfigStr.trim()) {
+      try {
+        userConfig = JSON.parse(customConfigStr);
+      } catch {
+        // Ignore JSON syntax errors during active editing
+      }
+    }
+
+    const requestedTheme = userConfig.theme;
+    const finalConfig: any = {
       startOnLoad: false,
       suppressErrorRendering: true,
-      theme: mode === 'dark' ? 'dark' : 'neutral',
       securityLevel: 'loose',
       fontFamily: '"JetBrains Mono", Inter, monospace',
-      themeVariables: themeVars,
-    });
+      ...userConfig,
+    };
+
+    // If no theme specified or theme is 'auto' or 'base', apply palette variables
+    if (!requestedTheme || requestedTheme === 'auto' || requestedTheme === 'base') {
+      finalConfig.theme = 'base';
+      finalConfig.themeVariables = {
+        ...themeVars,
+        ...(userConfig.themeVariables || {}),
+      };
+    } else {
+      finalConfig.theme = requestedTheme;
+      if (userConfig.themeVariables) {
+        finalConfig.themeVariables = userConfig.themeVariables;
+      }
+    }
+
+    mermaid.initialize(finalConfig);
   }
 
   function cleanupStrayMermaidNodes(renderId: string) {
@@ -136,7 +166,7 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
     }
 
     try {
-      initMermaid(opts.scheme, opts.theme);
+      initMermaid(opts.scheme, opts.theme, opts.config);
     } catch (err) {
       console.warn('Failed to re-initialize Mermaid:', err);
     }

@@ -14,7 +14,9 @@
     AlertTriangle,
     Image as ImageIcon,
     FileCode,
+    SlidersHorizontal,
     Sparkles,
+    Palette,
     Copy,
     Check,
   } from '@lucide/svelte';
@@ -30,12 +32,45 @@
     monacoTheme?: string;
   } = $props();
 
-  // Persistent draft
+  let activeTab = $state<'code' | 'config'>('code');
+
+  // Persistent code draft
   const mermaidDraft = createPersistedState('devtools_mermaid_draft', SAMPLES.mermaidFlowchart);
   let mermaidCode = $state(mermaidDraft.value);
 
   $effect(() => {
     mermaidDraft.value = mermaidCode;
+  });
+
+  // Persistent config draft
+  const DEFAULT_CONFIG = JSON.stringify(
+    {
+      theme: 'default',
+    },
+    null,
+    2
+  );
+
+  const mermaidConfigDraft = createPersistedState('devtools_mermaid_config', DEFAULT_CONFIG);
+  let mermaidConfig = $state(mermaidConfigDraft.value);
+
+  $effect(() => {
+    mermaidConfigDraft.value = mermaidConfig;
+  });
+
+  // Validate JSON config
+  let isConfigValid = $state(true);
+  $effect(() => {
+    if (!mermaidConfig.trim()) {
+      isConfigValid = true;
+      return;
+    }
+    try {
+      JSON.parse(mermaidConfig);
+      isConfigValid = true;
+    } catch {
+      isConfigValid = false;
+    }
   });
 
   // Watch document class for dark/light theme
@@ -55,12 +90,37 @@
   let panZoomCtrl = $state<PanZoomController | null>(null);
   let copied = $state(false);
 
-  // Preset selector
+  // Diagram presets
   const presets = [
     { label: 'Flowchart', code: SAMPLES.mermaidFlowchart },
     { label: 'Sequence Diagram', code: SAMPLES.mermaidSequence },
     { label: 'Architecture & Cloud', code: SAMPLES.mermaidArchitecture },
     { label: 'Entity Relationship (ERD)', code: SAMPLES.mermaidERD },
+  ];
+
+  // Theme & Config presets (popular themes from mermaid.live)
+  const themePresets = [
+    { label: 'Default', config: JSON.stringify({ theme: 'default' }, null, 2) },
+    { label: 'Neutral', config: JSON.stringify({ theme: 'neutral' }, null, 2) },
+    { label: 'Dark', config: JSON.stringify({ theme: 'dark' }, null, 2) },
+    { label: 'Forest', config: JSON.stringify({ theme: 'forest' }, null, 2) },
+    {
+      label: 'Base (Custom)',
+      config: JSON.stringify(
+        {
+          theme: 'base',
+          themeVariables: {
+            primaryColor: '#6366f1',
+            primaryTextColor: '#ffffff',
+            lineColor: '#818cf8',
+          },
+        },
+        null,
+        2
+      ),
+    },
+    { label: 'Hand-Drawn', config: JSON.stringify({ theme: 'default', look: 'handDrawn' }, null, 2) },
+    { label: 'Sync App', config: JSON.stringify({ theme: 'auto' }, null, 2) },
   ];
 
   function setPreset(code: string) {
@@ -88,8 +148,9 @@
     }
   }
 
-  function handleCopyCode() {
-    navigator.clipboard.writeText(mermaidCode);
+  function handleCopy() {
+    const textToCopy = activeTab === 'code' ? mermaidCode : mermaidConfig;
+    navigator.clipboard.writeText(textToCopy);
     copied = true;
     setTimeout(() => (copied = false), 1500);
   }
@@ -98,38 +159,56 @@
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Top Toolbar -->
   <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
-    <!-- Presets Dropdown & Quick Copy -->
+    <!-- Presets bar: switches based on active tab -->
     <div class="flex items-center gap-3">
-      <div class="flex items-center gap-1.5 text-on-surface-variant">
-        <Sparkles size={13} class="text-primary dark:text-indigo-400" />
-        <span class="font-medium">Presets:</span>
-      </div>
+      {#if activeTab === 'code'}
+        <div class="flex items-center gap-1.5 text-on-surface-variant">
+          <Sparkles size={13} class="text-primary dark:text-indigo-400" />
+          <span class="font-medium">Diagrams:</span>
+        </div>
 
-      <div class="flex items-center gap-1.5 flex-wrap">
-        {#each presets as preset}
-          <button
-            onclick={() => setPreset(preset.code)}
-            class="px-2 py-0.5 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-          >
-            {preset.label}
-          </button>
-        {/each}
-      </div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          {#each presets as preset}
+            <button
+              onclick={() => setPreset(preset.code)}
+              class="px-2 py-0.5 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+            >
+              {preset.label}
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div class="flex items-center gap-1.5 text-on-surface-variant">
+          <Palette size={13} class="text-primary dark:text-indigo-400" />
+          <span class="font-medium">Theme Presets:</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 flex-wrap">
+          {#each themePresets as preset}
+            <button
+              onclick={() => (mermaidConfig = preset.config)}
+              class="px-2 py-0.5 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+            >
+              {preset.label}
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
-    <!-- Right Controls: Code Copy, SVG/PNG Export -->
+    <!-- Right Controls: Copy, SVG/PNG Export -->
     <div class="flex items-center gap-2">
       <button
-        onclick={handleCopyCode}
+        onclick={handleCopy}
         class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-        title="Copy Mermaid Code"
+        title={activeTab === 'code' ? 'Copy Mermaid Code' : 'Copy Config JSON'}
       >
         {#if copied}
           <Check size={12} class="text-secondary" />
           <span>Copied!</span>
         {:else}
           <Copy size={12} />
-          <span>Copy Code</span>
+          <span>{activeTab === 'code' ? 'Copy Code' : 'Copy Config'}</span>
         {/if}
       </button>
 
@@ -159,22 +238,75 @@
 
   <!-- Main Split Editor & Preview Area -->
   <div class="flex-1 flex flex-col md:flex-row min-h-0 relative overflow-hidden">
-    <!-- Left Pane: Monaco Mermaid Editor -->
+    <!-- Left Pane: Tabs (Code / Config) + Monaco Editor -->
     <div class="w-full md:w-5/12 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-outline-variant flex flex-col relative bg-surface">
-      <div class="h-7 px-3 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono text-outline shrink-0">
-        <span>MERMAID DSL</span>
-        <span>UTF-8</span>
+      <!-- Tab Header -->
+      <div class="h-8 px-2 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono shrink-0">
+        <!-- Segmented Tab Toggle: Code | Config -->
+        <div class="flex items-center gap-1 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/60">
+          <button
+            onclick={() => (activeTab = 'code')}
+            class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer {activeTab === 'code'
+              ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface'}"
+          >
+            <FileCode size={12} />
+            <span>Code</span>
+          </button>
+
+          <button
+            onclick={() => (activeTab = 'config')}
+            class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer relative {activeTab === 'config'
+              ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface'}"
+          >
+            <SlidersHorizontal size={12} />
+            <span>Config</span>
+            {#if !isConfigValid}
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 absolute -top-0.5 -right-0.5"></span>
+            {/if}
+          </button>
+        </div>
+
+        <span class="text-outline text-[10px] pr-2">
+          {activeTab === 'code' ? 'MERMAID DSL' : isConfigValid ? 'JSON CONFIG (VALID)' : 'JSON CONFIG (SYNTAX WARNING)'}
+        </span>
       </div>
 
-      <div
-        class="flex-1 w-full h-full"
-        use:useMonacoEditor={{
-          value: mermaidCode,
-          language: 'mermaid',
-          theme: monacoTheme,
-          onChange: (val) => (mermaidCode = val),
-        }}
-      ></div>
+      <!-- Editor Content Area -->
+      <div class="flex-1 w-full h-full relative overflow-hidden">
+        <!-- Code Tab Monaco Editor -->
+        <div class="w-full h-full {activeTab === 'code' ? 'block' : 'hidden'}">
+          <div
+            class="w-full h-full"
+            use:useMonacoEditor={{
+              value: mermaidCode,
+              language: 'mermaid',
+              theme: monacoTheme,
+              onChange: (val) => (mermaidCode = val),
+            }}
+          ></div>
+        </div>
+
+        <!-- Config Tab Monaco Editor -->
+        <div class="w-full h-full {activeTab === 'config' ? 'flex flex-col' : 'hidden'}">
+          {#if !isConfigValid}
+            <div class="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-mono flex items-center gap-1.5 shrink-0">
+              <AlertTriangle size={12} class="shrink-0" />
+              <span>Invalid JSON syntax. Last valid configuration remains active.</span>
+            </div>
+          {/if}
+          <div
+            class="flex-1 w-full h-full"
+            use:useMonacoEditor={{
+              value: mermaidConfig,
+              language: 'json',
+              theme: monacoTheme,
+              onChange: (val) => (mermaidConfig = val),
+            }}
+          ></div>
+        </div>
+      </div>
     </div>
 
     <!-- Right Pane: Live Diagram Render & Viewport -->
@@ -239,6 +371,7 @@
           class="w-full h-full flex items-center justify-center pointer-events-auto"
           use:useMermaidRender={{
             code: mermaidCode,
+            config: mermaidConfig,
             scheme: scheme,
             theme: theme,
             onError: (err) => {
