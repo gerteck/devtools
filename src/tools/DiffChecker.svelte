@@ -14,6 +14,7 @@
     Filter,
     ChevronUp,
     ChevronDown,
+    Space,
   } from '@lucide/svelte';
 
   let {
@@ -29,6 +30,7 @@
   const sideBySideDraft = createPersistedState('devtools_diff_side_by_side', defaultSideBySide);
   const onlyDiffsDraft = createPersistedState('devtools_diff_only_diffs', false);
   const contextLinesDraft = createPersistedState('devtools_diff_context_lines', 3);
+  const excludeWhitespaceDraft = createPersistedState('devtools_diff_exclude_whitespace', false);
 
   let original = $state(origDraft.value);
   let modified = $state(modDraft.value);
@@ -36,6 +38,7 @@
   let isSideBySide = $state(sideBySideDraft.value);
   let showOnlyDiffs = $state(onlyDiffsDraft.value);
   let contextLines = $state(contextLinesDraft.value);
+  let excludeWhitespace = $state(excludeWhitespaceDraft.value);
 
   let diffControls = $state<MonacoDiffEditorControls | null>(null);
   let diffStats = $state<DiffStats>({ changesCount: 0, additions: 0, deletions: 0 });
@@ -60,6 +63,9 @@
   });
   $effect(() => {
     contextLinesDraft.value = contextLines;
+  });
+  $effect(() => {
+    excludeWhitespaceDraft.value = excludeWhitespace;
   });
 
   // Watch document class for dark/light theme
@@ -200,6 +206,19 @@
         </div>
       {/if}
 
+      <!-- Exclude Whitespace Toggle -->
+      <button
+        onclick={() => (excludeWhitespace = !excludeWhitespace)}
+        class="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded transition-all cursor-pointer {excludeWhitespace
+          ? 'bg-primary/10 text-primary border border-primary/40 font-semibold shadow-xs'
+          : 'bg-surface-container text-on-surface-variant hover:text-on-surface border border-outline-variant'}"
+        title={excludeWhitespace ? 'Whitespace changes are excluded (click to include)' : 'Exclude leading and trailing whitespace changes from diff'}
+      >
+        <Space size={13} class={excludeWhitespace ? 'text-primary' : 'text-on-surface-variant'} />
+        <span class="text-[11px] hidden sm:inline">Exclude Whitespace</span>
+        <span class="text-[11px] sm:hidden">No WS</span>
+      </button>
+
       <!-- Next / Prev Diff Navigation -->
       <div class="flex items-center bg-surface-container p-0.5 rounded border border-outline-variant">
         <button
@@ -331,6 +350,7 @@
         renderSideBySide: isSideBySide,
         hideUnchangedRegions: showOnlyDiffs,
         contextLineCount: contextLines,
+        ignoreTrimWhitespace: excludeWhitespace,
         onOriginalChange: (val) => (original = val),
         onModifiedChange: (val) => (modified = val),
         onDiffStatsChange: (stats) => (diffStats = stats),
@@ -345,6 +365,8 @@
       <span>Mode: <strong class="text-on-surface">{isSideBySide ? 'Side-by-side Split' : 'Unified Inline'}</strong></span>
       <span>•</span>
       <span>View: <strong class="text-on-surface">{showOnlyDiffs ? `Diffs Only (${contextLines} context)` : 'Full Document'}</strong></span>
+      <span>•</span>
+      <span>Whitespace: <strong class="text-on-surface">{excludeWhitespace ? 'Excluded' : 'Included'}</strong></span>
       <span>•</span>
       <span>Syntax: <strong class="text-on-surface uppercase">{selectedLanguage}</strong></span>
     </div>

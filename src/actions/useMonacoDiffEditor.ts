@@ -23,6 +23,7 @@ export interface MonacoDiffOptions {
   hideUnchangedRegions?: boolean;
   contextLineCount?: number;
   minimumLineCount?: number;
+  ignoreTrimWhitespace?: boolean;
   onModifiedChange?: (value: string) => void;
   onOriginalChange?: (value: string) => void;
   onDiffStatsChange?: (stats: DiffStats) => void;
@@ -47,6 +48,7 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
     renderSideBySide: options.renderSideBySide ?? true,
     renderIndicators: true,
     enableSplitViewResizing: true,
+    ignoreTrimWhitespace: options.ignoreTrimWhitespace ?? false,
     padding: { top: 12, bottom: 12 },
     hideUnchangedRegions: {
       enabled: options.hideUnchangedRegions ?? false,
@@ -175,6 +177,9 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       }
       if (newOptions.originalEditable !== undefined && newOptions.originalEditable !== options.originalEditable) {
         diffEditor.updateOptions({ originalEditable: newOptions.originalEditable });
+      }
+      if (newOptions.ignoreTrimWhitespace !== undefined && newOptions.ignoreTrimWhitespace !== options.ignoreTrimWhitespace) {
+        diffEditor.updateOptions({ ignoreTrimWhitespace: newOptions.ignoreTrimWhitespace });
       }
       if (
         newOptions.hideUnchangedRegions !== options.hideUnchangedRegions ||
