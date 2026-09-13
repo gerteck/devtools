@@ -17,6 +17,7 @@
     FileJson,
     CodeXml,
     Download,
+    AlignLeft,
   } from '@lucide/svelte';
 
   let {
@@ -34,6 +35,7 @@
 
   let indentSpaces = $state<2 | 4>(2);
   let copied = $state(false);
+  let formatted = $state(false);
 
   // Persistent draft
   const jsonDraft = createPersistedState('devtools_json_draft', SAMPLES.json);
@@ -114,6 +116,8 @@
     try {
       const obj = JSON.parse(rawJson);
       rawJson = JSON.stringify(obj, null, spaces);
+      formatted = true;
+      setTimeout(() => (formatted = false), 1200);
     } catch {
       // Keep as-is if invalid
     }
@@ -218,10 +222,26 @@
           <span class="hidden sm:inline">Sample</span>
         </button>
 
-        <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
+        <!-- Explicit Format Button -->
+        <button
+          onclick={() => formatJson(indentSpaces)}
+          class="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 rounded bg-primary text-white hover:opacity-90 font-medium transition-all shadow-xs cursor-pointer shrink-0 text-[11px] sm:text-xs"
+          title="Format JSON ({indentSpaces} spaces)"
+        >
+          {#if formatted}
+            <Check size={13} class="text-white" />
+            <span>Formatted</span>
+          {:else}
+            <AlignLeft size={13} />
+            <span>Format</span>
+          {/if}
+        </button>
+
+        <!-- Indentation Selector -->
+        <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden shrink-0">
           <button
             onclick={() => { indentSpaces = 2; formatJson(2); }}
-            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-surface-high text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
             title="Format with 2 spaces indentation"
           >
             2 sp
@@ -229,7 +249,7 @@
           <div class="w-px h-3.5 bg-outline-variant"></div>
           <button
             onclick={() => { indentSpaces = 4; formatJson(4); }}
-            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-surface-high text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
             title="Format with 4 spaces indentation"
           >
             4 sp
