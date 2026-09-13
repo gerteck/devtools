@@ -1,6 +1,5 @@
 <script lang="ts">
   import { useMonacoEditor } from '../actions/useMonacoEditor';
-  import { useMonacoDiffEditor } from '../actions/useMonacoDiffEditor';
   import JsonTreeView from '../components/JsonTreeView.svelte';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
@@ -12,39 +11,26 @@
     Sparkles,
     Braces,
     Network,
-    GitCompare,
     AlertCircle,
     CheckCircle2,
-    SlidersHorizontal,
   } from '@lucide/svelte';
 
-  let { initialTab = 'editor' }: { initialTab?: 'editor' | 'tree' | 'diff' } = $props();
+  let { initialTab = 'editor' }: { initialTab?: 'editor' | 'tree' } = $props();
 
-  let activeTab = $state<'editor' | 'tree' | 'diff'>('editor');
+  let activeTab = $state<'editor' | 'tree'>('editor');
   $effect(() => {
     activeTab = initialTab;
   });
   let indentSpaces = $state<2 | 4>(2);
   let copied = $state(false);
 
-  // Persistent drafts
+  // Persistent draft
   const jsonDraft = createPersistedState('devtools_json_draft', SAMPLES.json);
-  const diffOrigDraft = createPersistedState('devtools_diff_orig', SAMPLES.diffOriginal);
-  const diffModDraft = createPersistedState('devtools_diff_mod', SAMPLES.diffModified);
-
   let rawJson = $state(jsonDraft.value);
-  let diffOriginal = $state(diffOrigDraft.value);
-  let diffModified = $state(diffModDraft.value);
 
   // Sync to storage
   $effect(() => {
     jsonDraft.value = rawJson;
-  });
-  $effect(() => {
-    diffOrigDraft.value = diffOriginal;
-  });
-  $effect(() => {
-    diffModDraft.value = diffModified;
   });
 
   // Watch document class for theme
@@ -77,7 +63,6 @@
       parsedJson = null;
       const message = err?.message || 'Invalid JSON syntax';
 
-      // Parse line and column from error message (e.g. "at position 45" or "line 2 column 5")
       let line: number | undefined;
       let column: number | undefined;
 
@@ -133,21 +118,16 @@
   function loadSample() {
     rawJson = SAMPLES.json;
   }
-
-  function loadDiffSample() {
-    diffOriginal = SAMPLES.diffOriginal;
-    diffModified = SAMPLES.diffModified;
-  }
 </script>
 
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Toolbar Header -->
   <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
-    <!-- Tab Switcher -->
+    <!-- Tab Switcher: Editor vs Tree View -->
     <div class="flex items-center gap-1 bg-surface-container p-0.5 rounded-lg border border-outline-variant">
       <button
         onclick={() => (activeTab = 'editor')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all {activeTab === 'editor'
+        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'editor'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
@@ -157,88 +137,69 @@
 
       <button
         onclick={() => (activeTab = 'tree')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all {activeTab === 'tree'
+        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'tree'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
         <Network size={14} />
         <span>Tree View</span>
       </button>
-
-      <button
-        onclick={() => (activeTab = 'diff')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all {activeTab === 'diff'
-          ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
-          : 'text-on-surface-variant hover:text-on-surface'}"
-      >
-        <GitCompare size={14} />
-        <span>Diff Checker</span>
-      </button>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center gap-2">
-      {#if activeTab === 'diff'}
-        <button
-          onclick={loadDiffSample}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-        >
-          <Sparkles size={12} />
-          <span>Load Diff Sample</span>
-        </button>
-      {:else}
-        <button
-          onclick={loadSample}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-        >
-          <Sparkles size={12} />
-          <span>Sample</span>
-        </button>
+      <button
+        onclick={loadSample}
+        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        title="Load sample JSON"
+      >
+        <Sparkles size={12} />
+        <span>Sample</span>
+      </button>
 
-        <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
-          <button
-            onclick={() => { indentSpaces = 2; formatJson(2); }}
-            class="px-2 py-1 transition-colors {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
-          >
-            2 sp
-          </button>
-          <div class="w-px h-3.5 bg-outline-variant"></div>
-          <button
-            onclick={() => { indentSpaces = 4; formatJson(4); }}
-            class="px-2 py-1 transition-colors {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
-          >
-            4 sp
-          </button>
-        </div>
-
+      <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
         <button
-          onclick={minifyJson}
-          class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          onclick={() => { indentSpaces = 2; formatJson(2); }}
+          class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
         >
-          Minify
+          2 sp
         </button>
-
+        <div class="w-px h-3.5 bg-outline-variant"></div>
         <button
-          onclick={copyJson}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          onclick={() => { indentSpaces = 4; formatJson(4); }}
+          class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
         >
-          {#if copied}
-            <Check size={12} class="text-secondary" />
-            <span>Copied!</span>
-          {:else}
-            <Copy size={12} />
-            <span>Copy</span>
-          {/if}
+          4 sp
         </button>
+      </div>
 
-        <button
-          onclick={clearJson}
-          class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
-          title="Clear Input"
-        >
-          <Trash2 size={14} />
-        </button>
-      {/if}
+      <button
+        onclick={minifyJson}
+        class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+      >
+        Minify
+      </button>
+
+      <button
+        onclick={copyJson}
+        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+      >
+        {#if copied}
+          <Check size={12} class="text-secondary" />
+          <span>Copied!</span>
+        {:else}
+          <Copy size={12} />
+          <span>Copy</span>
+        {/if}
+      </button>
+
+      <button
+        onclick={clearJson}
+        class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
+        title="Clear Input"
+      >
+        <Trash2 size={14} />
+      </button>
     </div>
   </div>
 
@@ -277,24 +238,10 @@
           </div>
         {/if}
       </div>
-
-    {:else if activeTab === 'diff'}
-      <!-- Side-by-side Diff View -->
-      <div
-        class="flex-1 w-full h-full"
-        use:useMonacoDiffEditor={{
-          original: diffOriginal,
-          modified: diffModified,
-          language: 'json',
-          theme: currentTheme,
-          onOriginalChange: (v) => (diffOriginal = v),
-          onModifiedChange: (v) => (diffModified = v),
-        }}
-      ></div>
     {/if}
 
     <!-- Parsing Error Status Bar -->
-    {#if jsonError && activeTab !== 'diff'}
+    {#if jsonError}
       <div class="border-t border-rose-500/30 bg-rose-500/10 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-600 dark:text-rose-400 shrink-0">
         <div class="flex items-center gap-2">
           <AlertCircle size={14} class="shrink-0" />
@@ -307,7 +254,7 @@
           </span>
         {/if}
       </div>
-    {:else if activeTab !== 'diff' && rawJson.trim()}
+    {:else if rawJson.trim()}
       <div class="border-t border-outline-variant bg-surface px-4 py-1.5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant shrink-0">
         <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
           <CheckCircle2 size={13} />

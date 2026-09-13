@@ -7,6 +7,8 @@ export interface MonacoDiffOptions {
   language: string;
   theme?: string;
   readOnly?: boolean;
+  originalEditable?: boolean;
+  renderSideBySide?: boolean;
   onModifiedChange?: (value: string) => void;
   onOriginalChange?: (value: string) => void;
 }
@@ -21,11 +23,12 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
   const diffEditor = monaco.editor.createDiffEditor(node, {
     theme: options.theme || 'devtools-dark',
     readOnly: options.readOnly ?? false,
+    originalEditable: options.originalEditable ?? true,
     automaticLayout: true,
     fontFamily: '"JetBrains Mono", Menlo, Monaco, Consolas, monospace',
     fontSize: 13,
     lineHeight: 20,
-    renderSideBySide: true,
+    renderSideBySide: options.renderSideBySide ?? true,
     renderIndicators: true,
     enableSplitViewResizing: true,
     padding: { top: 12, bottom: 12 },
@@ -61,6 +64,12 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       if (newOptions.language && newOptions.language !== options.language) {
         monaco.editor.setModelLanguage(originalModel, newOptions.language);
         monaco.editor.setModelLanguage(modifiedModel, newOptions.language);
+      }
+      if (newOptions.renderSideBySide !== undefined && newOptions.renderSideBySide !== options.renderSideBySide) {
+        diffEditor.updateOptions({ renderSideBySide: newOptions.renderSideBySide });
+      }
+      if (newOptions.originalEditable !== undefined && newOptions.originalEditable !== options.originalEditable) {
+        diffEditor.updateOptions({ originalEditable: newOptions.originalEditable });
       }
       if (newOptions.original !== originalModel.getValue()) {
         isInternalChange = true;

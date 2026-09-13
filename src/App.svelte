@@ -5,6 +5,7 @@
   import Footer from './components/Footer.svelte';
   import Home from './tools/Home.svelte';
   import JsonSuite from './tools/JsonSuite.svelte';
+  import DiffChecker from './tools/DiffChecker.svelte';
   import MermaidStudio from './tools/MermaidStudio.svelte';
 
   // Initialize theme from localStorage or default to dark
@@ -59,9 +60,9 @@
       {#if router.currentRoute === '/'}
         <Home />
       {:else if router.currentRoute === '/json'}
-        <JsonSuite initialTab="editor" />
+        <JsonSuite />
       {:else if router.currentRoute === '/diff'}
-        <JsonSuite initialTab="diff" />
+        <DiffChecker />
       {:else if router.currentRoute === '/mermaid'}
         <MermaidStudio />
       {/if}

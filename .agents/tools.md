@@ -14,12 +14,11 @@ Overview of implemented developer utilities, their route contracts, and componen
 
 ---
 
-## 2. JSON Suite (`/#/json` & `/#/diff`)
+## 2. JSON Formatter & Tree (`/#/json`)
 - **File:** `src/tools/JsonSuite.svelte`
 - **Tabs:**
   - `editor`: Monaco code editor with JSON language mode, line numbers, automatic layout.
   - `tree`: Visual collapsible tree view implemented via `src/components/JsonTreeView.svelte`.
-  - `diff`: Side-by-side Monaco diff viewer via `src/actions/useMonacoDiffEditor.ts`.
 - **Actions:**
   - Indent toggle (2 spaces vs 4 spaces).
   - Minify JSON.
@@ -32,7 +31,22 @@ Overview of implemented developer utilities, their route contracts, and componen
 
 ---
 
-## 3. Mermaid Studio (`/#/mermaid`)
+## 3. Diff Checker (`/#/diff`)
+- **File:** `src/tools/DiffChecker.svelte`
+- **Editor:**
+  - Monaco Diff Editor via `src/actions/useMonacoDiffEditor.ts`.
+  - **Both sides fully editable** (`originalEditable: true`).
+  - Layout toggle: Side-by-side Split View vs Unified Inline View.
+  - Language selector (JSON, Plain Text, TypeScript, JavaScript, HTML, CSS, YAML, Markdown, XML).
+- **Actions:**
+  - Swap sides (Original <-> Modified).
+  - Copy Left / Copy Right.
+  - Load Sample comparison.
+  - Clear both panes.
+
+---
+
+## 4. Mermaid Studio (`/#/mermaid`)
 - **File:** `src/tools/MermaidStudio.svelte`
 - **Editor:**
   - Left split pane with Monaco editor.
