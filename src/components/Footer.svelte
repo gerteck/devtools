@@ -32,56 +32,60 @@
 </script>
 
 {#if !isHidden}
-  <footer class="w-full border-t border-outline-variant bg-surface py-3 select-none shrink-0 transition-colors">
-    <div class="w-full px-4 sm:px-6 flex items-center justify-end gap-3 sm:gap-4 text-xs font-mono text-on-surface-variant">
-      <button
-        onclick={() => (showShortcutsModal = true)}
-        class="hover:text-on-surface transition-colors cursor-pointer"
-      >
-        shortcuts
-      </button>
-      <span class="text-outline-variant">/</span>
-      <a
-        href="https://github.com/gerteck/devtools/"
-        target="_blank"
-        rel="noreferrer"
-        class="inline-flex items-center gap-1 hover:text-on-surface transition-colors group"
-        title="Star devtools on GitHub"
-      >
-        <span>view on github</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="text-on-surface-variant group-hover:text-on-surface transition-colors"
-        >
-          <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-          <path d="M9 18c-4.51 2-5-2-7-2" />
-        </svg>
-      </a>
-      <span class="text-outline-variant">/</span>
+  <footer class="w-full border-t border-outline-variant bg-surface py-2.5 select-none shrink-0 transition-colors">
+    <div class="w-full px-4 sm:px-6 flex items-center justify-between gap-4 text-xs font-mono text-on-surface-variant">
+      <!-- Left: Hide footer button -->
       <button
         onclick={() => (isHidden = true)}
-        class="inline-flex items-center gap-1 hover:text-on-surface text-on-surface-variant transition-colors cursor-pointer"
+        class="inline-flex items-center gap-1.5 hover:text-on-surface text-on-surface-variant transition-colors cursor-pointer group"
         title="Hide footer to maximize screen space"
       >
-        <EyeOff size={12} />
-        <span>hide</span>
+        <EyeOff size={12} class="opacity-70 group-hover:opacity-100 transition-opacity" />
+        <span>hide footer</span>
       </button>
+
+      <!-- Right: Shortcuts & GitHub -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <button
+          onclick={() => (showShortcutsModal = true)}
+          class="hover:text-on-surface transition-colors cursor-pointer"
+        >
+          shortcuts
+        </button>
+        <span class="text-outline-variant">/</span>
+        <a
+          href="https://github.com/gerteck/devtools/"
+          target="_blank"
+          rel="noreferrer"
+          class="inline-flex items-center gap-1 hover:text-on-surface transition-colors group"
+          title="Star devtools on GitHub"
+        >
+          <span>view on github</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="text-on-surface-variant group-hover:text-on-surface transition-colors"
+          >
+            <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+            <path d="M9 18c-4.51 2-5-2-7-2" />
+          </svg>
+        </a>
+      </div>
     </div>
   </footer>
 {:else}
-  <!-- Subtle Floating Show Footer Pill -->
-  <div class="fixed bottom-2.5 right-3 z-30 select-none">
+  <!-- Floating Show Footer Pill (Bottom Left, adjacent to sidebar on desktop) -->
+  <div class="fixed bottom-2.5 left-3 md:left-16 z-30 select-none">
     <button
       onclick={() => (isHidden = false)}
-      class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface/85 hover:bg-surface border border-outline-variant/80 hover:border-outline text-on-surface-variant hover:text-on-surface text-[11px] font-mono shadow-xs backdrop-blur-md transition-all opacity-50 hover:opacity-100 cursor-pointer group"
+      class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface/85 hover:bg-surface border border-outline-variant/80 hover:border-outline text-on-surface-variant hover:text-on-surface text-[11px] font-mono shadow-xs backdrop-blur-md transition-all opacity-60 hover:opacity-100 cursor-pointer group"
       title="Show footer"
     >
       <ChevronUp size={12} class="group-hover:-translate-y-0.5 transition-transform" />
