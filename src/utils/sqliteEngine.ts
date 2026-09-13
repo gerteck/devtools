@@ -7,6 +7,18 @@ export interface TableColumnInfo {
   notnull: boolean;
   dflt_value: any;
   pk: boolean;
+  fk?: boolean;
+}
+
+export interface ForeignKeyInfo {
+  id: number;
+  seq: number;
+  table: string;
+  from: string;
+  to: string;
+  on_update: string;
+  on_delete: string;
+  match: string;
 }
 
 export interface TableItem {
@@ -15,6 +27,7 @@ export interface TableItem {
   rowCount: number;
   sql?: string;
   columns?: TableColumnInfo[];
+  foreignKeys?: ForeignKeyInfo[];
 }
 
 export interface QueryResult {
@@ -360,6 +373,31 @@ export class SqliteEngine {
         // Ignore
       }
 
+      // Foreign key definitions
+      const fkRows: any[][] = [];
+      try {
+        this.db.exec({
+          sql: `PRAGMA foreign_key_list("${name}");`,
+          rowMode: 'array',
+          resultRows: fkRows,
+        });
+      } catch {
+        // Ignore
+      }
+
+      const foreignKeys: ForeignKeyInfo[] = fkRows.map((r) => ({
+        id: Number(r[0]),
+        seq: Number(r[1]),
+        table: String(r[2]),
+        from: String(r[3]),
+        to: String(r[4] || 'id'),
+        on_update: String(r[5] || 'NO ACTION'),
+        on_delete: String(r[6] || 'NO ACTION'),
+        match: String(r[7] || 'NONE'),
+      }));
+
+      const fkColNames = new Set(foreignKeys.map((fk) => fk.from));
+
       const columns: TableColumnInfo[] = colRows.map((r) => ({
         cid: r[0],
         name: r[1],
@@ -367,6 +405,7 @@ export class SqliteEngine {
         notnull: Boolean(r[3]),
         dflt_value: r[4],
         pk: Boolean(r[5]),
+        fk: fkColNames.has(r[1]),
       }));
 
       schemaItems.push({
@@ -375,6 +414,7 @@ export class SqliteEngine {
         rowCount,
         sql,
         columns,
+        foreignKeys,
       });
     }
 

@@ -97,7 +97,7 @@ import SqliteViewer from './tools/SqliteViewer.svelte';
       {:else if router.currentRoute === '/plantuml'}
         <PlantUMLStudio {scheme} theme={mode} {monacoTheme} />
       {:else if router.currentRoute === '/sqlite'}
-        <SqliteViewer theme={monacoTheme} />
+        <SqliteViewer {scheme} theme={mode} {monacoTheme} />
       {/if}
     </main>
   </div>

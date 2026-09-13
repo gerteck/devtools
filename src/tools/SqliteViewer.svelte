@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { router } from '../router.svelte';
   import { useMonacoEditor } from '../actions/useMonacoEditor';
+  import { useMermaidRender } from '../actions/useMermaidRender';
+  import { usePanZoom, type PanZoomController } from '../actions/usePanZoom';
   import SplitPane from '../components/SplitPane.svelte';
   import {
     getSqliteModule,
@@ -8,6 +11,13 @@
     type TableItem,
     type DbMetadata,
   } from '../utils/sqliteEngine';
+  import {
+    generateMermaidERD,
+    generateDBML,
+    getErdStats,
+  } from '../utils/erdGenerator';
+  import { downloadSvg, downloadPng } from '../utils/export';
+  import type { ColorScheme, ThemeMode } from '../types';
   import {
     Database,
     Upload,
@@ -34,9 +44,24 @@
     X,
     FileSpreadsheet,
     HelpCircle,
+    Workflow,
+    ZoomIn,
+    ZoomOut,
+    Maximize,
+    RotateCcw,
+    ExternalLink,
+    AlertTriangle,
   } from '@lucide/svelte';
 
-  let { theme = 'devtools-dark' }: { theme?: string } = $props();
+  let {
+    theme = 'dark',
+    scheme = 'gruvbox',
+    monacoTheme = 'theme-gruvbox-dark',
+  }: {
+    theme?: ThemeMode;
+    scheme?: ColorScheme;
+    monacoTheme?: string;
+  } = $props();
 
   // Engine state
   let engine = $state<SqliteEngine | null>(null);
@@ -47,8 +72,67 @@
 
   // Navigation & selection
   let selectedTableName = $state<string>('');
-  let activeTab = $state<'data' | 'query' | 'schema' | 'health'>('data');
+  let activeTab = $state<'data' | 'query' | 'schema' | 'erd' | 'health'>('data');
   let tableSearchQuery = $state('');
+
+  // ER Diagram & DBML visualizer state
+  let erdViewMode = $state<'visual' | 'dbml' | 'mermaid'>('visual');
+  let erdMermaidCode = $derived(generateMermaidERD(tables));
+  let erdDbmlCode = $derived(generateDBML(tables));
+  let erdStats = $derived(getErdStats(tables));
+  let panZoomCtrl = $state<PanZoomController | null>(null);
+  let svgElement = $state<SVGSVGElement | null>(null);
+  let erdParseError = $state<string | null>(null);
+  let dbmlCopied = $state(false);
+  let mermaidCopied = $state(false);
+  let erdAutoFitted = $state(false);
+
+  function copyDbml() {
+    navigator.clipboard.writeText(erdDbmlCode);
+    dbmlCopied = true;
+    setTimeout(() => (dbmlCopied = false), 1500);
+  }
+
+  function downloadDbml() {
+    const filename = `${metadata?.filename.replace(/\.[^/.]+$/, '') || 'database'}_schema.dbml`;
+    const blob = new Blob([erdDbmlCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function copyMermaid() {
+    navigator.clipboard.writeText(erdMermaidCode);
+    mermaidCopied = true;
+    setTimeout(() => (mermaidCopied = false), 1500);
+  }
+
+  function handleExportErdSvg() {
+    if (!svgElement || erdParseError) return;
+    const base = metadata?.filename.replace(/\.[^/.]+$/, '') || 'database';
+    downloadSvg(svgElement, `${base}_erd.svg`);
+  }
+
+  function handleExportErdPng() {
+    if (!svgElement || erdParseError) return;
+    const base = metadata?.filename.replace(/\.[^/.]+$/, '') || 'database';
+    const bg = theme === 'dark' ? '#1d2021' : '#ffffff';
+    downloadPng(svgElement, `${base}_erd.png`, 2, bg);
+  }
+
+  function openInMermaidStudio() {
+    try {
+      localStorage.setItem('devtools_mermaid_draft', erdMermaidCode);
+    } catch {
+      // Ignore
+    }
+    router.navigate('/mermaid');
+  }
 
   // Data grid state
   let gridColumns = $state<string[]>([]);
@@ -585,7 +669,27 @@
                   : 'text-on-surface-variant hover:text-on-surface'}"
               >
                 <Code2 size={12} />
-                <span>Schema & DDL</span>
+                <span class="hidden sm:inline">Schema & DDL</span>
+                <span class="sm:hidden">Schema</span>
+              </button>
+
+              <button
+                onclick={() => {
+                  activeTab = 'erd';
+                  erdAutoFitted = false;
+                }}
+                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer {activeTab === 'erd'
+                  ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'}"
+              >
+                <Workflow size={12} />
+                <span class="hidden sm:inline">ER Diagram</span>
+                <span class="sm:hidden">ERD</span>
+                {#if erdStats.relationCount > 0}
+                  <span class="text-[9px] px-1 rounded-full bg-primary/10 text-primary dark:text-indigo-400 font-bold hidden md:inline">
+                    {erdStats.relationCount}
+                  </span>
+                {/if}
               </button>
 
               <button
@@ -1048,6 +1152,238 @@
                     }}
                   ></div>
                 </div>
+              </div>
+            </div>
+
+          <!-- TAB: ER DIAGRAM & DBML VIEW -->
+          {:else if activeTab === 'erd'}
+            <div class="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+              <!-- ERD Sub-Toolbar -->
+              <div class="h-9 px-3 border-b border-outline-variant bg-surface flex items-center justify-between gap-2 text-xs font-mono shrink-0 overflow-x-auto no-scrollbar">
+                <!-- Left: View Switcher & Stats -->
+                <div class="flex items-center gap-2 shrink-0">
+                  <!-- Mode Pills: Visual | DBML | Mermaid -->
+                  <div class="flex items-center bg-surface-container/60 p-0.5 rounded border border-outline-variant/60">
+                    <button
+                      onclick={() => (erdViewMode = 'visual')}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer {erdViewMode === 'visual'
+                        ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                        : 'text-on-surface-variant hover:text-on-surface'}"
+                      title="Interactive Visual ER Diagram"
+                    >
+                      <Workflow size={11} />
+                      <span>Visual</span>
+                    </button>
+                    <button
+                      onclick={() => (erdViewMode = 'dbml')}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer {erdViewMode === 'dbml'
+                        ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                        : 'text-on-surface-variant hover:text-on-surface'}"
+                      title="Database Markup Language (DBML)"
+                    >
+                      <FileCode size={11} />
+                      <span>DBML</span>
+                    </button>
+                    <button
+                      onclick={() => (erdViewMode = 'mermaid')}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer {erdViewMode === 'mermaid'
+                        ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                        : 'text-on-surface-variant hover:text-on-surface'}"
+                      title="Mermaid erDiagram DSL"
+                    >
+                      <Code2 size={11} />
+                      <span>Mermaid</span>
+                    </button>
+                  </div>
+
+                  <span class="text-[11px] text-outline hidden sm:inline">
+                    {erdStats.tableCount} tables · {erdStats.relationCount} relationships
+                  </span>
+                </div>
+
+                <!-- Right: Action Controls -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                  {#if erdViewMode === 'visual'}
+                    <!-- Pan / Zoom Controls -->
+                    <div class="flex items-center gap-0.5 bg-surface-container/60 p-0.5 rounded border border-outline-variant/60">
+                      <button
+                        onclick={() => panZoomCtrl?.zoomIn()}
+                        class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors cursor-pointer"
+                        title="Zoom In"
+                      >
+                        <ZoomIn size={12} />
+                      </button>
+                      <button
+                        onclick={() => panZoomCtrl?.zoomOut()}
+                        class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors cursor-pointer"
+                        title="Zoom Out"
+                      >
+                        <ZoomOut size={12} />
+                      </button>
+                      <button
+                        onclick={() => panZoomCtrl?.fitToScreen()}
+                        class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors cursor-pointer"
+                        title="Fit to Screen"
+                      >
+                        <Maximize size={12} />
+                      </button>
+                      <button
+                        onclick={() => panZoomCtrl?.reset()}
+                        class="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface transition-colors cursor-pointer"
+                        title="Reset View"
+                      >
+                        <RotateCcw size={12} />
+                      </button>
+                    </div>
+
+                    <div class="h-4 w-px bg-outline-variant"></div>
+
+                    <!-- Export SVG / PNG -->
+                    <button
+                      onclick={handleExportErdSvg}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                      title="Download Vector SVG"
+                    >
+                      <Download size={11} />
+                      <span class="hidden sm:inline">SVG</span>
+                    </button>
+                    <button
+                      onclick={handleExportErdPng}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                      title="Download Raster PNG"
+                    >
+                      <Download size={11} />
+                      <span class="hidden sm:inline">PNG</span>
+                    </button>
+
+                    <button
+                      onclick={openInMermaidStudio}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary dark:text-indigo-400 border border-primary/20 hover:bg-primary/20 text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Open and edit in Mermaid Studio"
+                    >
+                      <ExternalLink size={11} />
+                      <span class="hidden md:inline">Edit in Studio</span>
+                    </button>
+
+                  {:else if erdViewMode === 'dbml'}
+                    <button
+                      onclick={copyDbml}
+                      class="flex items-center gap-1 px-2.5 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-[11px]"
+                      title="Copy DBML to clipboard"
+                    >
+                      {#if dbmlCopied}
+                        <Check size={11} class="text-secondary" />
+                        <span>Copied!</span>
+                      {:else}
+                        <Copy size={11} />
+                        <span>Copy DBML</span>
+                      {/if}
+                    </button>
+                    <button
+                      onclick={downloadDbml}
+                      class="flex items-center gap-1 px-2.5 py-0.5 rounded bg-primary text-white hover:opacity-90 font-medium transition-colors cursor-pointer text-[11px] shadow-xs"
+                      title="Download as .dbml file"
+                    >
+                      <Download size={11} />
+                      <span>Download .dbml</span>
+                    </button>
+
+                  {:else if erdViewMode === 'mermaid'}
+                    <button
+                      onclick={copyMermaid}
+                      class="flex items-center gap-1 px-2.5 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-[11px]"
+                      title="Copy Mermaid Code"
+                    >
+                      {#if mermaidCopied}
+                        <Check size={11} class="text-secondary" />
+                        <span>Copied!</span>
+                      {:else}
+                        <Copy size={11} />
+                        <span>Copy Code</span>
+                      {/if}
+                    </button>
+                    <button
+                      onclick={openInMermaidStudio}
+                      class="flex items-center gap-1 px-2.5 py-0.5 rounded bg-primary text-white hover:opacity-90 font-medium transition-colors cursor-pointer text-[11px] shadow-xs"
+                      title="Open in Mermaid Studio"
+                    >
+                      <ExternalLink size={11} />
+                      <span>Open in Studio</span>
+                    </button>
+                  {/if}
+                </div>
+              </div>
+
+              <!-- Main Viewport Area -->
+              <div class="flex-1 min-h-0 relative w-full h-full overflow-hidden bg-background">
+                {#if erdViewMode === 'visual'}
+                  {#if erdParseError}
+                    <div class="absolute top-2 inset-x-4 z-30 bg-amber-500/10 border border-amber-500/30 rounded p-3 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                      <AlertTriangle size={14} class="shrink-0 mt-0.5" />
+                      <div>
+                        <strong>ER Diagram Render Notice:</strong>
+                        <p class="text-[11px] mt-0.5">{erdParseError}</p>
+                      </div>
+                    </div>
+                  {/if}
+
+                  <!-- SVG Pan & Zoom Viewport -->
+                  <div
+                    class="w-full h-full relative overflow-hidden flex items-center justify-center select-none"
+                    use:usePanZoom={{
+                      onRegister: (ctrl) => (panZoomCtrl = ctrl),
+                    }}
+                  >
+                    <div
+                      class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-4 pointer-events-auto shadow-sm {theme === 'dark' ? 'bg-surface/90 shadow-inner' : 'bg-white shadow-xs'}"
+                      use:useMermaidRender={{
+                        code: erdMermaidCode,
+                        scheme: scheme,
+                        theme: theme,
+                        onError: (err) => {
+                          erdParseError = err ? err.message : null;
+                        },
+                        onSuccess: (node) => {
+                          svgElement = node;
+                          erdParseError = null;
+                          if (!erdAutoFitted) {
+                            erdAutoFitted = true;
+                            setTimeout(() => panZoomCtrl?.fitToScreen(), 80);
+                          }
+                        },
+                      }}
+                    ></div>
+                  </div>
+
+                  <!-- Canvas bottom watermark -->
+                  <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] font-mono text-outline/60">
+                    Drag to pan • Scroll to zoom
+                  </div>
+
+                {:else if erdViewMode === 'dbml'}
+                  <!-- DBML Monaco Editor -->
+                  <div
+                    class="w-full h-full"
+                    use:useMonacoEditor={{
+                      value: erdDbmlCode,
+                      language: 'plaintext',
+                      theme: monacoTheme,
+                      readOnly: true,
+                    }}
+                  ></div>
+
+                {:else if erdViewMode === 'mermaid'}
+                  <!-- Mermaid Monaco Editor -->
+                  <div
+                    class="w-full h-full"
+                    use:useMonacoEditor={{
+                      value: erdMermaidCode,
+                      language: 'mermaid',
+                      theme: monacoTheme,
+                      readOnly: true,
+                    }}
+                  ></div>
+                {/if}
               </div>
             </div>
 
