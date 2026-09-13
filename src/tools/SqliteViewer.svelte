@@ -33,6 +33,7 @@
     AlertCircle,
     X,
     FileSpreadsheet,
+    HelpCircle,
   } from '@lucide/svelte';
 
   let { theme = 'devtools-dark' }: { theme?: string } = $props();
@@ -75,6 +76,7 @@
   // Drag-and-drop highlight
   let isDraggingOver = $state(false);
   let fileInputRef = $state<HTMLInputElement | null>(null);
+  let showUploadGuide = $state(false);
 
   // Initialize SQLite WASM on mount
   onMount(async () => {
@@ -299,12 +301,17 @@
   const totalPages = $derived(Math.ceil(gridTotalRows / gridPageSize) || 1);
 </script>
 
-<!-- Keyboard shortcut to run query (⌘Enter) -->
+<!-- Keyboard shortcut to run query (⌘Enter) & dismiss popovers -->
 <svelte:window
   onkeydown={(e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && activeTab === 'query') {
       e.preventDefault();
       runCustomQuery();
+    }
+  }}
+  onclick={(e) => {
+    if (showUploadGuide && !(e.target as HTMLElement)?.closest('.upload-guide-container')) {
+      showUploadGuide = false;
     }
   }}
 />
@@ -360,15 +367,88 @@
 
     <!-- Right Controls: Open DB, Sample DB, Export -->
     <div class="flex items-center gap-2">
-      <!-- Open Files -->
-      <button
-        onclick={() => fileInputRef?.click()}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-        title="Open .db, .sqlite, .wal files"
-      >
-        <Upload size={13} />
-        <span>Open Files</span>
-      </button>
+      <!-- Open Files with Hover & Click Guide Trigger -->
+      <div class="relative group upload-guide-container">
+        <div class="flex items-center rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high transition-colors overflow-hidden">
+          <button
+            onclick={() => fileInputRef?.click()}
+            class="flex items-center gap-1.5 px-2.5 py-1 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs"
+            title="Open .db, .sqlite, .wal files"
+          >
+            <Upload size={13} />
+            <span>Open Files</span>
+          </button>
+
+          <div class="w-px h-3.5 bg-outline-variant"></div>
+
+          <button
+            onclick={() => (showUploadGuide = !showUploadGuide)}
+            class="px-1.5 py-1 text-outline hover:text-primary transition-colors cursor-pointer"
+            title="What files can I upload? (Click for guide)"
+            aria-label="Upload file types info"
+          >
+            <HelpCircle size={12} />
+          </button>
+        </div>
+
+        <!-- Floating Hover / Click Guide Popover -->
+        <div
+          class="absolute right-0 top-full mt-2 w-80 sm:w-96 p-4 rounded-xl bg-surface border border-outline-variant shadow-2xl z-50 font-mono text-xs text-on-surface transition-all duration-200 {showUploadGuide
+            ? 'opacity-100 pointer-events-auto scale-100'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto scale-98 group-hover:scale-100'}"
+        >
+          <div class="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5">
+            <span class="font-bold flex items-center gap-1.5 text-on-surface">
+              <Database size={13} class="text-primary dark:text-indigo-400" />
+              Supported Files & Formats
+            </span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary dark:text-indigo-400 font-sans font-medium">
+              100% Client-Side
+            </span>
+          </div>
+
+          <!-- File format badges and descriptions -->
+          <div class="space-y-2 text-[11px]">
+            <div class="flex items-start gap-2">
+              <span class="px-1.5 py-0.5 rounded bg-surface-container border border-outline-variant font-bold text-on-surface text-[10px] shrink-0">
+                .db / .sqlite
+              </span>
+              <p class="text-on-surface-variant leading-tight">
+                Standard SQLite database files (also accepts <code>.sqlite3</code>).
+              </p>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-[10px] shrink-0">
+                .wal / -wal
+              </span>
+              <p class="text-on-surface-variant leading-tight">
+                <strong>Write-Ahead Log:</strong> Contains uncommitted transactions and recent write pages.
+              </p>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold text-[10px] shrink-0">
+                .shm / -shm
+              </span>
+              <p class="text-on-surface-variant leading-tight">
+                <strong>Shared Memory:</strong> Companion index for WAL mode (optional).
+              </p>
+            </div>
+          </div>
+
+          <!-- Pro Tip Box -->
+          <div class="mt-3 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 flex items-start gap-2 text-[10.5px] leading-relaxed text-on-surface-variant">
+            <span class="text-amber-500 text-xs mt-0.5 shrink-0">💡</span>
+            <div>
+              <strong class="text-on-surface">Pro-Tip for WAL Databases:</strong>
+              <div class="mt-0.5">
+                Select or drop your <code>.db</code> and companion <code>.wal</code> files <strong>together in a single batch</strong>. They will automatically be replayed into memory to display the latest uncommitted rows!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Load Sample DB -->
       <button
