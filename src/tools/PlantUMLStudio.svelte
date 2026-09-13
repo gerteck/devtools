@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useMonacoEditor } from '../actions/useMonacoEditor';
   import { usePanZoom, type PanZoomController } from '../actions/usePanZoom';
+  import SplitPane from '../components/SplitPane.svelte';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
   import { downloadSvg, downloadPng } from '../utils/export';
@@ -333,118 +334,120 @@
     </div>
   {/if}
 
-  <!-- Main Split Editor & Preview Area -->
-  <div class="flex-1 flex flex-col md:flex-row min-h-0 relative overflow-hidden">
-    <!-- Left Pane: Monaco PlantUML Editor -->
-    <div class="w-full md:w-5/12 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-outline-variant flex flex-col relative bg-surface">
-      <div class="h-7 px-3 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono text-outline shrink-0">
-        <span>PLANTUML DSL (@startuml)</span>
-        <span>UTF-8</span>
-      </div>
-
-      <div
-        class="flex-1 w-full h-full"
-        use:useMonacoEditor={{
-          value: plantumlCode,
-          language: 'plantuml',
-          theme: monacoTheme,
-          onChange: (val) => (plantumlCode = val),
-        }}
-      ></div>
-    </div>
-
-    <!-- Right Pane: Live Diagram Render & Viewport -->
-    <div class="w-full md:w-7/12 h-1/2 md:h-full flex flex-col relative bg-background overflow-hidden">
-      <!-- Diagram Viewport Header & Zoom Controls -->
-      <div class="h-8 px-4 border-b border-outline-variant bg-surface flex items-center justify-between text-[11px] font-mono shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="text-outline">DIAGRAM PREVIEW</span>
-          {#if serverUrl !== DEFAULT_SERVER}
-            <span class="text-[10px] px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
-              Custom Server
-            </span>
-          {/if}
+  <!-- Main Split Editor & Preview Area with Draggable Splitter -->
+  <SplitPane storageKey="devtools_plantuml_split" defaultSplit={42}>
+    {#snippet left()}
+      <div class="w-full h-full flex flex-col relative bg-surface overflow-hidden border-b md:border-b-0">
+        <div class="h-7 px-3 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono text-outline shrink-0">
+          <span>PLANTUML DSL (@startuml)</span>
+          <span>UTF-8</span>
         </div>
 
-        <!-- Pan / Zoom Controls -->
-        <div class="flex items-center gap-1 text-on-surface-variant">
-          <button
-            onclick={() => panZoomCtrl?.zoomIn()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.zoomOut()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.fitToScreen()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Fit to Screen"
-          >
-            <Maximize size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.reset()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Reset View"
-          >
-            <RotateCcw size={14} />
-          </button>
-        </div>
+        <div
+          class="flex-1 w-full h-full"
+          use:useMonacoEditor={{
+            value: plantumlCode,
+            language: 'plantuml',
+            theme: monacoTheme,
+            onChange: (val) => (plantumlCode = val),
+          }}
+        ></div>
       </div>
+    {/snippet}
 
-      <!-- Live Error / Warning Banners -->
-      {#if errorMessage}
-        <div class="absolute top-8 inset-x-0 z-30 bg-red-500/10 border-b border-red-500/30 px-4 py-2 text-xs font-mono text-red-600 dark:text-red-400 flex items-center justify-between gap-2 backdrop-blur-xs">
-          <div class="flex items-center gap-2 overflow-hidden">
-            <AlertTriangle size={15} class="shrink-0" />
-            <span class="font-semibold shrink-0">Render Error:</span>
-            <span class="truncate">{errorMessage}</span>
+    {#snippet right()}
+      <div class="w-full h-full flex flex-col relative bg-background overflow-hidden">
+        <!-- Diagram Viewport Header & Zoom Controls -->
+        <div class="h-8 px-4 border-b border-outline-variant bg-surface flex items-center justify-between text-[11px] font-mono shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-outline">DIAGRAM PREVIEW</span>
+            {#if serverUrl !== DEFAULT_SERVER}
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                Custom Server
+              </span>
+            {/if}
           </div>
-          <button
-            onclick={() => renderDiagram(plantumlCode)}
-            class="px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-500/20 text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      {:else if hasSyntaxWarning}
-        <div class="absolute top-8 inset-x-0 z-30 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2 backdrop-blur-xs">
-          <AlertTriangle size={15} class="shrink-0 mt-0.5" />
-          <div class="overflow-hidden">
-            <span class="font-semibold mr-1">Syntax Issue:</span>
-            <span>{syntaxWarningDetail ? `${syntaxWarningDetail}. Review the red markers in the preview diagram.` : 'PlantUML reported a syntax issue in the diagram. Review the red markers in the preview.'}</span>
+
+          <!-- Pan / Zoom Controls -->
+          <div class="flex items-center gap-1 text-on-surface-variant">
+            <button
+              onclick={() => panZoomCtrl?.zoomIn()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Zoom In"
+            >
+              <ZoomIn size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.zoomOut()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Zoom Out"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.fitToScreen()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Fit to Screen"
+            >
+              <Maximize size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.reset()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Reset View"
+            >
+              <RotateCcw size={14} />
+            </button>
           </div>
         </div>
-      {/if}
 
-      <!-- SVG Container with Pan & Zoom -->
-      <div
-        class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-4 select-none"
-        use:usePanZoom={{
-          onRegister: (ctrl) => (panZoomCtrl = ctrl),
-        }}
-      >
-        <!-- The target manipulated by panzoom -->
-        <div class="w-full h-full flex items-center justify-center pointer-events-auto">
-          <div
-            bind:this={svgContainerRef}
-            class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-2 {isDark ? 'bg-zinc-900/50 shadow-inner' : 'bg-white shadow-xs'}"
-            class:opacity-50={isLoading}
-          ></div>
+        <!-- Live Error / Warning Banners -->
+        {#if errorMessage}
+          <div class="absolute top-8 inset-x-0 z-30 bg-red-500/10 border-b border-red-500/30 px-4 py-2 text-xs font-mono text-red-600 dark:text-red-400 flex items-center justify-between gap-2 backdrop-blur-xs">
+            <div class="flex items-center gap-2 overflow-hidden">
+              <AlertTriangle size={15} class="shrink-0" />
+              <span class="font-semibold shrink-0">Render Error:</span>
+              <span class="truncate">{errorMessage}</span>
+            </div>
+            <button
+              onclick={() => renderDiagram(plantumlCode)}
+              class="px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-500/20 text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        {:else if hasSyntaxWarning}
+          <div class="absolute top-8 inset-x-0 z-30 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2 backdrop-blur-xs">
+            <AlertTriangle size={15} class="shrink-0 mt-0.5" />
+            <div class="overflow-hidden">
+              <span class="font-semibold mr-1">Syntax Issue:</span>
+              <span>{syntaxWarningDetail ? `${syntaxWarningDetail}. Review the red markers in the preview diagram.` : 'PlantUML reported a syntax issue in the diagram. Review the red markers in the preview.'}</span>
+            </div>
+          </div>
+        {/if}
+
+        <!-- SVG Container with Pan & Zoom -->
+        <div
+          class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-4 select-none"
+          use:usePanZoom={{
+            onRegister: (ctrl) => (panZoomCtrl = ctrl),
+          }}
+        >
+          <!-- The target manipulated by panzoom -->
+          <div class="w-full h-full flex items-center justify-center pointer-events-auto">
+            <div
+              bind:this={svgContainerRef}
+              class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-2 {isDark ? 'bg-zinc-900/50 shadow-inner' : 'bg-white shadow-xs'}"
+              class:opacity-50={isLoading}
+            ></div>
+          </div>
+        </div>
+
+        <!-- Hint watermark -->
+        <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] font-mono text-outline/60">
+          Drag to pan • Scroll to zoom
         </div>
       </div>
-
-      <!-- Hint watermark -->
-      <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] font-mono text-outline/60">
-        Drag to pan • Scroll to zoom
-      </div>
-    </div>
-  </div>
+    {/snippet}
+  </SplitPane>
 </div>

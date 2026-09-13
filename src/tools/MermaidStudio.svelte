@@ -2,6 +2,7 @@
   import { useMonacoEditor } from '../actions/useMonacoEditor';
   import { useMermaidRender } from '../actions/useMermaidRender';
   import { usePanZoom, type PanZoomController } from '../actions/usePanZoom';
+  import SplitPane from '../components/SplitPane.svelte';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
   import { downloadSvg, downloadPng } from '../utils/export';
@@ -249,166 +250,168 @@
     </div>
   </div>
 
-  <!-- Main Split Editor & Preview Area -->
-  <div class="flex-1 flex flex-col md:flex-row min-h-0 relative overflow-hidden">
-    <!-- Left Pane: Tabs (Code / Config) + Monaco Editor -->
-    <div class="w-full md:w-5/12 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-outline-variant flex flex-col relative bg-surface">
-      <!-- Tab Header -->
-      <div class="h-8 px-2 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono shrink-0">
-        <!-- Segmented Tab Toggle: Code | Config -->
-        <div class="flex items-center gap-1 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/60">
-          <button
-            onclick={() => (activeTab = 'code')}
-            class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer {activeTab === 'code'
-              ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
-              : 'text-on-surface-variant hover:text-on-surface'}"
-          >
-            <FileCode size={12} />
-            <span>Code</span>
-          </button>
+  <!-- Main Split Editor & Preview Area with Draggable Splitter -->
+  <SplitPane storageKey="devtools_mermaid_split" defaultSplit={42}>
+    {#snippet left()}
+      <div class="w-full h-full flex flex-col relative bg-surface overflow-hidden border-b md:border-b-0">
+        <!-- Tab Header -->
+        <div class="h-8 px-2 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-[11px] font-mono shrink-0">
+          <!-- Segmented Tab Toggle: Code | Config -->
+          <div class="flex items-center gap-1 bg-surface-container/60 p-0.5 rounded-md border border-outline-variant/60">
+            <button
+              onclick={() => (activeTab = 'code')}
+              class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer {activeTab === 'code'
+                ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                : 'text-on-surface-variant hover:text-on-surface'}"
+            >
+              <FileCode size={12} />
+              <span>Code</span>
+            </button>
 
-          <button
-            onclick={() => (activeTab = 'config')}
-            class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer relative {activeTab === 'config'
-              ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
-              : 'text-on-surface-variant hover:text-on-surface'}"
-          >
-            <SlidersHorizontal size={12} />
-            <span>Config</span>
+            <button
+              onclick={() => (activeTab = 'config')}
+              class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer relative {activeTab === 'config'
+                ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
+                : 'text-on-surface-variant hover:text-on-surface'}"
+            >
+              <SlidersHorizontal size={12} />
+              <span>Config</span>
+              {#if !isConfigValid}
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 absolute -top-0.5 -right-0.5"></span>
+              {/if}
+            </button>
+          </div>
+
+          <span class="text-outline text-[10px] pr-2">
+            {activeTab === 'code' ? 'MERMAID DSL' : isConfigValid ? 'JSON CONFIG (VALID)' : 'JSON CONFIG (SYNTAX WARNING)'}
+          </span>
+        </div>
+
+        <!-- Editor Content Area -->
+        <div class="flex-1 w-full h-full relative overflow-hidden">
+          <!-- Code Tab Monaco Editor -->
+          <div class="w-full h-full {activeTab === 'code' ? 'block' : 'hidden'}">
+            <div
+              class="w-full h-full"
+              use:useMonacoEditor={{
+                value: mermaidCode,
+                language: 'mermaid',
+                theme: monacoTheme,
+                onChange: (val) => (mermaidCode = val),
+              }}
+            ></div>
+          </div>
+
+          <!-- Config Tab Monaco Editor -->
+          <div class="w-full h-full {activeTab === 'config' ? 'flex flex-col' : 'hidden'}">
             {#if !isConfigValid}
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 absolute -top-0.5 -right-0.5"></span>
+              <div class="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-mono flex items-center gap-1.5 shrink-0">
+                <AlertTriangle size={12} class="shrink-0" />
+                <span>Invalid JSON syntax. Last valid configuration remains active.</span>
+              </div>
             {/if}
-          </button>
-        </div>
-
-        <span class="text-outline text-[10px] pr-2">
-          {activeTab === 'code' ? 'MERMAID DSL' : isConfigValid ? 'JSON CONFIG (VALID)' : 'JSON CONFIG (SYNTAX WARNING)'}
-        </span>
-      </div>
-
-      <!-- Editor Content Area -->
-      <div class="flex-1 w-full h-full relative overflow-hidden">
-        <!-- Code Tab Monaco Editor -->
-        <div class="w-full h-full {activeTab === 'code' ? 'block' : 'hidden'}">
-          <div
-            class="w-full h-full"
-            use:useMonacoEditor={{
-              value: mermaidCode,
-              language: 'mermaid',
-              theme: monacoTheme,
-              onChange: (val) => (mermaidCode = val),
-            }}
-          ></div>
-        </div>
-
-        <!-- Config Tab Monaco Editor -->
-        <div class="w-full h-full {activeTab === 'config' ? 'flex flex-col' : 'hidden'}">
-          {#if !isConfigValid}
-            <div class="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-mono flex items-center gap-1.5 shrink-0">
-              <AlertTriangle size={12} class="shrink-0" />
-              <span>Invalid JSON syntax. Last valid configuration remains active.</span>
-            </div>
-          {/if}
-          <div
-            class="flex-1 w-full h-full"
-            use:useMonacoEditor={{
-              value: mermaidConfig,
-              language: 'json',
-              theme: monacoTheme,
-              onChange: (val) => (mermaidConfig = val),
-            }}
-          ></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Pane: Live Diagram Render & Viewport -->
-    <div class="w-full md:w-7/12 h-1/2 md:h-full flex flex-col relative bg-background overflow-hidden">
-      <!-- Diagram Viewport Header & Zoom Controls -->
-      <div class="h-8 px-4 border-b border-outline-variant bg-surface flex items-center justify-between text-[11px] font-mono shrink-0">
-        <span class="text-outline">DIAGRAM PREVIEW</span>
-
-        <!-- Pan / Zoom Controls -->
-        <div class="flex items-center gap-1 text-on-surface-variant">
-          <button
-            onclick={() => panZoomCtrl?.zoomIn()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Zoom In"
-          >
-            <ZoomIn size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.zoomOut()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Zoom Out"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.fitToScreen()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Fit to Screen"
-          >
-            <Maximize size={14} />
-          </button>
-          <button
-            onclick={() => panZoomCtrl?.reset()}
-            class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-            title="Reset View"
-          >
-            <RotateCcw size={14} />
-          </button>
-        </div>
-      </div>
-
-      <!-- Live Syntax Error Banner -->
-      {#if parseError}
-        <div class="absolute top-8 inset-x-0 z-30 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2 backdrop-blur-xs">
-          <AlertTriangle size={15} class="shrink-0 mt-0.5" />
-          <div class="overflow-hidden">
-            <span class="font-semibold mr-1">Mermaid Syntax Warning:</span>
-            <span class="truncate block">{parseError}</span>
+            <div
+              class="flex-1 w-full h-full"
+              use:useMonacoEditor={{
+                value: mermaidConfig,
+                language: 'json',
+                theme: monacoTheme,
+                onChange: (val) => (mermaidConfig = val),
+              }}
+            ></div>
           </div>
         </div>
-      {/if}
+      </div>
+    {/snippet}
 
-      <!-- SVG Container with Pan & Zoom -->
-      <div
-        class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-4 select-none"
-        use:usePanZoom={{
-          onRegister: (ctrl) => (panZoomCtrl = ctrl),
-        }}
-      >
-        <!-- The SVG Canvas target manipulated by panzoom -->
+    {#snippet right()}
+      <div class="w-full h-full flex flex-col relative bg-background overflow-hidden">
+        <!-- Diagram Viewport Header & Zoom Controls -->
+        <div class="h-8 px-4 border-b border-outline-variant bg-surface flex items-center justify-between text-[11px] font-mono shrink-0">
+          <span class="text-outline">DIAGRAM PREVIEW</span>
+
+          <!-- Pan / Zoom Controls -->
+          <div class="flex items-center gap-1 text-on-surface-variant">
+            <button
+              onclick={() => panZoomCtrl?.zoomIn()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Zoom In"
+            >
+              <ZoomIn size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.zoomOut()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Zoom Out"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.fitToScreen()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Fit to Screen"
+            >
+              <Maximize size={14} />
+            </button>
+            <button
+              onclick={() => panZoomCtrl?.reset()}
+              class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              title="Reset View"
+            >
+              <RotateCcw size={14} />
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Syntax Error Banner -->
+        {#if parseError}
+          <div class="absolute top-8 inset-x-0 z-30 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2 backdrop-blur-xs">
+            <AlertTriangle size={15} class="shrink-0 mt-0.5" />
+            <div class="overflow-hidden">
+              <span class="font-semibold mr-1">Mermaid Syntax Warning:</span>
+              <span class="truncate block">{parseError}</span>
+            </div>
+          </div>
+        {/if}
+
+        <!-- SVG Container with Pan & Zoom -->
         <div
-          class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-3 pointer-events-auto {isDark && isLightThemeConfig
-            ? 'bg-white text-zinc-900 shadow-md'
-            : isDark
-              ? 'bg-zinc-900/60 shadow-inner'
-              : 'bg-white shadow-xs'}"
-          use:useMermaidRender={{
-            code: mermaidCode,
-            config: mermaidConfig,
-            scheme: scheme,
-            theme: theme,
-            onError: (err) => {
-              parseError = err ? err.message : null;
-            },
-            onSuccess: (node) => {
-              svgElement = node;
-              if (!hasAutoFit) {
-                hasAutoFit = true;
-                setTimeout(() => panZoomCtrl?.fitToScreen(), 60);
-              }
-            },
+          class="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-4 select-none"
+          use:usePanZoom={{
+            onRegister: (ctrl) => (panZoomCtrl = ctrl),
           }}
-        ></div>
-      </div>
+        >
+          <!-- The SVG Canvas target manipulated by panzoom -->
+          <div
+            class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-3 pointer-events-auto {isDark && isLightThemeConfig
+              ? 'bg-white text-zinc-900 shadow-md'
+              : isDark
+                ? 'bg-zinc-900/60 shadow-inner'
+                : 'bg-white shadow-xs'}"
+            use:useMermaidRender={{
+              code: mermaidCode,
+              config: mermaidConfig,
+              scheme: scheme,
+              theme: theme,
+              onError: (err) => {
+                parseError = err ? err.message : null;
+              },
+              onSuccess: (node) => {
+                svgElement = node;
+                if (!hasAutoFit) {
+                  hasAutoFit = true;
+                  setTimeout(() => panZoomCtrl?.fitToScreen(), 60);
+                }
+              },
+            }}
+          ></div>
+        </div>
 
-      <!-- Hint watermark -->
-      <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] font-mono text-outline/60">
-        Drag to pan • Scroll to zoom
+        <!-- Hint watermark -->
+        <div class="absolute bottom-2 right-3 pointer-events-none text-[10px] font-mono text-outline/60">
+          Drag to pan • Scroll to zoom
+        </div>
       </div>
-    </div>
-  </div>
+    {/snippet}
+  </SplitPane>
 </div>
