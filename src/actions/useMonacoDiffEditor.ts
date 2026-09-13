@@ -114,6 +114,11 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
     const model = ed.getModel();
     if (model) {
       ed.focus();
+      try {
+        ed.trigger('keyboard', 'editor.action.selectAll', null);
+      } catch {
+        // Fallback
+      }
       ed.setSelection(model.getFullModelRange());
     }
   };
@@ -128,7 +133,12 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
 
   // Also capture keyboard Ctrl+A / Cmd+A at DOM container level to ensure reliable selection
   const handleKeydown = (e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'a' || e.key === 'A')) {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      !e.shiftKey &&
+      !e.altKey &&
+      (e.key === 'a' || e.key === 'A' || e.code === 'KeyA')
+    ) {
       const origDom = originalEditor.getDomNode();
       const modDom = modifiedEditor.getDomNode();
       const activeEl = document.activeElement;

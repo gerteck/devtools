@@ -42,6 +42,51 @@ export const useMonacoEditor: Action<HTMLElement, MonacoEditorOptions> = (node, 
     }
   });
 
+  // Helper to select all text in the editor
+  const selectAllInEditor = () => {
+    const model = editor.getModel();
+    if (model) {
+      editor.focus();
+      try {
+        editor.trigger('keyboard', 'editor.action.selectAll', null);
+      } catch {
+        // Fallback to manual model selection range
+      }
+      editor.setSelection(model.getFullModelRange());
+    }
+  };
+
+  // Bind Ctrl+A / Cmd+A command explicitly to Monaco editor
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {
+    selectAllInEditor();
+  });
+
+  // Also capture keyboard Ctrl+A / Cmd+A at DOM container level to ensure reliable selection
+  const handleKeydown = (e: KeyboardEvent) => {
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      !e.shiftKey &&
+      !e.altKey &&
+      (e.key === 'a' || e.key === 'A' || e.code === 'KeyA')
+    ) {
+      const dom = editor.getDomNode();
+      const activeEl = document.activeElement;
+      const target = e.target as Node | null;
+
+      if (
+        editor.hasTextFocus() ||
+        (dom && activeEl && dom.contains(activeEl)) ||
+        (dom && target && dom.contains(target)) ||
+        (target && node.contains(target))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        selectAllInEditor();
+      }
+    }
+  };
+  node.addEventListener('keydown', handleKeydown, true);
+
   // Observe resize to maintain layout responsiveness
   const resizeObserver = new ResizeObserver(() => {
     editor.layout();
@@ -71,6 +116,7 @@ export const useMonacoEditor: Action<HTMLElement, MonacoEditorOptions> = (node, 
     },
     destroy() {
       try {
+        node.removeEventListener('keydown', handleKeydown, true);
         resizeObserver.disconnect();
         disposable.dispose();
         editor.dispose();
