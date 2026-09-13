@@ -84,7 +84,9 @@
                 <h2 class="text-sm font-semibold text-on-surface group-hover:text-primary dark:group-hover:text-indigo-400 transition-colors">
                   {tool.name}
                 </h2>
-                <span class="text-[11px] font-mono text-outline">{tool.version}</span>
+                {#if tool.version}
+                  <span class="text-[11px] font-mono text-outline">{tool.version}</span>
+                {/if}
               </div>
             </div>
             <kbd class="text-[10px] font-mono text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded border border-outline-variant">

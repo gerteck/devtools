@@ -1,10 +1,9 @@
 import type { Route, ToolItem } from './types';
 
-export const TOOLS: ToolItem[] = [
+export const TOOLS: ToolItem[] = $state([
   {
     id: 'json',
     name: 'JSON Formatter',
-    version: 'v1.2',
     description: 'Format, validate, and inspect JSON payloads. Handles large inputs with collapsible trees and syntax highlighting.',
     tag: 'JSON / Schema',
     route: '/json',
@@ -15,7 +14,6 @@ export const TOOLS: ToolItem[] = [
   {
     id: 'diff',
     name: 'Diff Checker',
-    version: 'v1.0',
     description: 'Unified and split-pane text comparison for source code, configuration files, and raw text snippets.',
     tag: 'Text / Unified',
     route: '/diff',
@@ -26,7 +24,7 @@ export const TOOLS: ToolItem[] = [
   {
     id: 'mermaid',
     name: 'Mermaid Studio',
-    version: 'v0.9',
+    version: 'v11.17.2',
     description: 'Text-to-diagram editor supporting flowcharts, sequence diagrams, and class relations with SVG export.',
     tag: 'Diagrams / SVG',
     route: '/mermaid',
@@ -37,7 +35,7 @@ export const TOOLS: ToolItem[] = [
   {
     id: 'plantuml',
     name: 'PlantUML Studio',
-    version: 'v1.0',
+    version: 'v1.2026.8',
     description: 'Component, sequence, and class diagrams with cloud encoding, pan-zoom viewer, and high-res export.',
     tag: 'UML / Cloud',
     route: '/plantuml',
@@ -45,7 +43,7 @@ export const TOOLS: ToolItem[] = [
     shortcutLabel: '⌘4',
     icon: 'network',
   },
-];
+]);
 
 class Router {
   currentRoute = $state<Route>(this.getRouteFromHash());

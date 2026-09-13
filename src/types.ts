@@ -6,7 +6,7 @@ export type ThemeMode = 'dark' | 'light';
 export interface ToolItem {
   id: string;
   name: string;
-  version: string;
+  version?: string;
   description: string;
   tag: string;
   route: Route;
