@@ -81,15 +81,19 @@
     </div>
   </footer>
 {:else}
-  <!-- Floating Show Footer Pill (Bottom Left, adjacent to sidebar on desktop) -->
-  <div class="fixed bottom-2.5 left-3 md:left-16 z-30 select-none">
+  <!-- Floating Show Footer FAB on the Toolbar Side -->
+  <div class="fixed bottom-2 left-2 z-30 select-none">
     <button
       onclick={() => (isHidden = false)}
-      class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface/85 hover:bg-surface border border-outline-variant/80 hover:border-outline text-on-surface-variant hover:text-on-surface text-[11px] font-mono shadow-xs backdrop-blur-md transition-all opacity-60 hover:opacity-100 cursor-pointer group"
+      class="group relative w-10 h-10 rounded-lg flex items-center justify-center bg-surface hover:bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface shadow-sm transition-all cursor-pointer"
       title="Show footer"
     >
-      <ChevronUp size={12} class="group-hover:-translate-y-0.5 transition-transform" />
-      <span>footer</span>
+      <ChevronUp size={18} strokeWidth={2} class="group-hover:-translate-y-0.5 transition-transform" />
+
+      <!-- Hover Tooltip -->
+      <div class="pointer-events-none absolute left-full ml-2.5 px-2.5 py-1 rounded bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 text-xs font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md flex items-center gap-1.5">
+        <span>Show footer</span>
+      </div>
     </button>
   </div>
 {/if}
