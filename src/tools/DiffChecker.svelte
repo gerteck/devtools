@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useMonacoDiffEditor } from '../actions/useMonacoDiffEditor';
+  import { useMonacoDiffEditor, type MonacoDiffEditorControls, type DiffStats } from '../actions/useMonacoDiffEditor';
   import { SAMPLES } from '../utils/samples';
   import { createPersistedState } from '../utils/storage.svelte';
   import {
@@ -11,6 +11,9 @@
     Rows2,
     Copy,
     Check,
+    Filter,
+    ChevronUp,
+    ChevronDown,
   } from '@lucide/svelte';
 
   let {
@@ -23,11 +26,18 @@
   const modDraft = createPersistedState('devtools_diff_mod', SAMPLES.diffModified);
   const langDraft = createPersistedState('devtools_diff_lang', 'json');
   const sideBySideDraft = createPersistedState('devtools_diff_side_by_side', true);
+  const onlyDiffsDraft = createPersistedState('devtools_diff_only_diffs', false);
+  const contextLinesDraft = createPersistedState('devtools_diff_context_lines', 3);
 
   let original = $state(origDraft.value);
   let modified = $state(modDraft.value);
   let selectedLanguage = $state(langDraft.value);
   let isSideBySide = $state(sideBySideDraft.value);
+  let showOnlyDiffs = $state(onlyDiffsDraft.value);
+  let contextLines = $state(contextLinesDraft.value);
+
+  let diffControls = $state<MonacoDiffEditorControls | null>(null);
+  let diffStats = $state<DiffStats>({ changesCount: 0, additions: 0, deletions: 0 });
 
   let copiedSide = $state<'orig' | 'mod' | null>(null);
 
@@ -43,6 +53,12 @@
   });
   $effect(() => {
     sideBySideDraft.value = isSideBySide;
+  });
+  $effect(() => {
+    onlyDiffsDraft.value = showOnlyDiffs;
+  });
+  $effect(() => {
+    contextLinesDraft.value = contextLines;
   });
 
   // Watch document class for dark/light theme
@@ -142,6 +158,70 @@
           <span class="text-[11px]">Unified</span>
         </button>
       </div>
+
+      <div class="h-4 w-px bg-outline-variant"></div>
+
+      <!-- Show Only Diffs Toggle -->
+      <button
+        onclick={() => (showOnlyDiffs = !showOnlyDiffs)}
+        class="flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer {showOnlyDiffs
+          ? 'bg-primary/10 text-primary border border-primary/40 font-semibold shadow-xs'
+          : 'bg-surface-container text-on-surface-variant hover:text-on-surface border border-outline-variant'}"
+        title="Show only diffs and collapse unchanged code lines"
+      >
+        <Filter size={12} class={showOnlyDiffs ? 'text-primary' : 'text-on-surface-variant'} />
+        <span class="text-[11px]">Diffs Only</span>
+      </button>
+
+      {#if showOnlyDiffs}
+        <div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
+          <span>Context:</span>
+          <select
+            bind:value={contextLines}
+            class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary cursor-pointer"
+            title="Lines of unchanged context around differences"
+          >
+            <option value={1}>1 line</option>
+            <option value={3}>3 lines</option>
+            <option value={5}>5 lines</option>
+            <option value={10}>10 lines</option>
+          </select>
+        </div>
+      {/if}
+
+      <!-- Next / Prev Diff Navigation -->
+      <div class="flex items-center bg-surface-container p-0.5 rounded border border-outline-variant">
+        <button
+          onclick={() => diffControls?.goToDiff('previous')}
+          disabled={diffStats.changesCount === 0}
+          class="p-0.5 px-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+          title="Previous difference"
+        >
+          <ChevronUp size={13} />
+        </button>
+        <button
+          onclick={() => diffControls?.goToDiff('next')}
+          disabled={diffStats.changesCount === 0}
+          class="p-0.5 px-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+          title="Next difference"
+        >
+          <ChevronDown size={13} />
+        </button>
+      </div>
+
+      <!-- Diff count badge -->
+      {#if diffStats.changesCount === 0}
+        <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <Check size={11} />
+          <span>Identical</span>
+        </span>
+      {:else}
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
+          <span class="font-medium text-on-surface">{diffStats.changesCount} diff{diffStats.changesCount > 1 ? 's' : ''}</span>
+          <span class="text-emerald-600 dark:text-emerald-400 font-semibold">+{diffStats.additions}</span>
+          <span class="text-rose-600 dark:text-rose-400 font-semibold">-{diffStats.deletions}</span>
+        </span>
+      {/if}
     </div>
 
     <!-- Right: Actions -->
@@ -234,8 +314,12 @@
         theme: theme,
         originalEditable: true,
         renderSideBySide: isSideBySide,
+        hideUnchangedRegions: showOnlyDiffs,
+        contextLineCount: contextLines,
         onOriginalChange: (val) => (original = val),
         onModifiedChange: (val) => (modified = val),
+        onDiffStatsChange: (stats) => (diffStats = stats),
+        onInitControls: (ctrls) => (diffControls = ctrls),
       }}
     ></div>
   </div>
@@ -244,6 +328,8 @@
   <div class="border-t border-outline-variant bg-surface px-4 py-1.5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant shrink-0">
     <div class="flex items-center gap-3">
       <span>Mode: <strong class="text-on-surface">{isSideBySide ? 'Side-by-side Split' : 'Unified Inline'}</strong></span>
+      <span>•</span>
+      <span>View: <strong class="text-on-surface">{showOnlyDiffs ? `Diffs Only (${contextLines} context)` : 'Full Document'}</strong></span>
       <span>•</span>
       <span>Syntax: <strong class="text-on-surface uppercase">{selectedLanguage}</strong></span>
     </div>

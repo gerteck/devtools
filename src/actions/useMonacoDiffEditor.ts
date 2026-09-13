@@ -1,6 +1,17 @@
 import type { Action } from 'svelte/action';
 import { monaco } from '../utils/monaco';
 
+export interface DiffStats {
+  changesCount: number;
+  additions: number;
+  deletions: number;
+}
+
+export interface MonacoDiffEditorControls {
+  goToDiff: (target: 'next' | 'previous') => void;
+  getLineChanges: () => monaco.editor.ILineChange[] | null;
+}
+
 export interface MonacoDiffOptions {
   original: string;
   modified: string;
@@ -9,8 +20,13 @@ export interface MonacoDiffOptions {
   readOnly?: boolean;
   originalEditable?: boolean;
   renderSideBySide?: boolean;
+  hideUnchangedRegions?: boolean;
+  contextLineCount?: number;
+  minimumLineCount?: number;
   onModifiedChange?: (value: string) => void;
   onOriginalChange?: (value: string) => void;
+  onDiffStatsChange?: (stats: DiffStats) => void;
+  onInitControls?: (controls: MonacoDiffEditorControls) => void;
 }
 
 export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node, initialOptions) => {
@@ -32,6 +48,12 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
     renderIndicators: true,
     enableSplitViewResizing: true,
     padding: { top: 12, bottom: 12 },
+    hideUnchangedRegions: {
+      enabled: options.hideUnchangedRegions ?? false,
+      contextLineCount: options.contextLineCount ?? 3,
+      minimumLineCount: options.minimumLineCount ?? 3,
+      revealLineCount: 20,
+    },
   });
 
   diffEditor.setModel({
@@ -50,6 +72,40 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       options.onModifiedChange(modifiedModel.getValue());
     }
   });
+
+  const computeStats = () => {
+    const lineChanges = diffEditor.getLineChanges();
+    if (!lineChanges) {
+      options.onDiffStatsChange?.({ changesCount: 0, additions: 0, deletions: 0 });
+      return;
+    }
+    let additions = 0;
+    let deletions = 0;
+    for (const change of lineChanges) {
+      if (change.modifiedEndLineNumber >= change.modifiedStartLineNumber && change.modifiedStartLineNumber > 0) {
+        additions += (change.modifiedEndLineNumber - change.modifiedStartLineNumber + 1);
+      }
+      if (change.originalEndLineNumber >= change.originalStartLineNumber && change.originalStartLineNumber > 0) {
+        deletions += (change.originalEndLineNumber - change.originalStartLineNumber + 1);
+      }
+    }
+    options.onDiffStatsChange?.({
+      changesCount: lineChanges.length,
+      additions,
+      deletions,
+    });
+  };
+
+  const diffDisposable = diffEditor.onDidUpdateDiff(() => {
+    computeStats();
+  });
+
+  if (options.onInitControls) {
+    options.onInitControls({
+      goToDiff: (target) => diffEditor.goToDiff(target),
+      getLineChanges: () => diffEditor.getLineChanges(),
+    });
+  }
 
   const resizeObserver = new ResizeObserver(() => {
     diffEditor.layout();
@@ -71,6 +127,20 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
       if (newOptions.originalEditable !== undefined && newOptions.originalEditable !== options.originalEditable) {
         diffEditor.updateOptions({ originalEditable: newOptions.originalEditable });
       }
+      if (
+        newOptions.hideUnchangedRegions !== options.hideUnchangedRegions ||
+        newOptions.contextLineCount !== options.contextLineCount ||
+        newOptions.minimumLineCount !== options.minimumLineCount
+      ) {
+        diffEditor.updateOptions({
+          hideUnchangedRegions: {
+            enabled: newOptions.hideUnchangedRegions ?? false,
+            contextLineCount: newOptions.contextLineCount ?? 3,
+            minimumLineCount: newOptions.minimumLineCount ?? 3,
+            revealLineCount: 20,
+          },
+        });
+      }
       if (newOptions.original !== originalModel.getValue()) {
         isInternalChange = true;
         originalModel.setValue(newOptions.original);
@@ -88,6 +158,7 @@ export const useMonacoDiffEditor: Action<HTMLElement, MonacoDiffOptions> = (node
         resizeObserver.disconnect();
         origDisposable.dispose();
         modDisposable.dispose();
+        diffDisposable.dispose();
         diffEditor.setModel(null);
         diffEditor.dispose();
         originalModel.dispose();
