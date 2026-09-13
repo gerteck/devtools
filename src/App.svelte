@@ -18,7 +18,7 @@ import SqliteViewer from './tools/SqliteViewer.svelte';
   );
 
   let scheme = $state<ColorScheme>(
-    (typeof localStorage !== 'undefined' && (localStorage.getItem('devtools_scheme') as ColorScheme)) || 'default'
+    (typeof localStorage !== 'undefined' && (localStorage.getItem('devtools_scheme') as ColorScheme)) || 'gruvbox'
   );
 
   // Sync DOM and persistence

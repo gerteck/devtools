@@ -18,7 +18,7 @@
   import pkg from '../../package.json';
 
   let {
-    scheme = 'default',
+    scheme = 'gruvbox',
     theme = 'dark',
     onSelectScheme,
     onToggleTheme,
@@ -34,8 +34,8 @@
   let mobileMenuOpen = $state(false);
 
   const schemes: { id: ColorScheme; label: string; short: string }[] = [
-    { id: 'default', label: 'Zinc (Default)', short: 'Zinc' },
-    { id: 'gruvbox', label: 'Gruvbox', short: 'Gruvbox' },
+    { id: 'gruvbox', label: 'Gruvbox (Default)', short: 'Gruvbox' },
+    { id: 'default', label: 'Zinc', short: 'Zinc' },
     { id: 'catppuccin', label: 'Catppuccin', short: 'Catppuccin' },
     { id: 'nord', label: 'Nord', short: 'Nord' },
   ];
