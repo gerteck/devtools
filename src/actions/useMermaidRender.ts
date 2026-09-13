@@ -145,20 +145,25 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
   function cleanupStrayMermaidNodes(renderId: string) {
     try {
       const strayError = document.getElementById('d' + renderId);
-      if (strayError) strayError.remove();
-      const strayRender = document.getElementById(renderId);
-      if (strayRender && strayRender !== node) strayRender.remove();
+      if (strayError && !node.contains(strayError)) strayError.remove();
 
-      // Clean up any other stray elements appended to document body by Mermaid error handlers
-      document.querySelectorAll('body > [id^="dmermaid"], body > [id^="mermaid-svg-"], body > .mermaid-error').forEach((el) => {
-        el.remove();
-      });
+      // Clean up any stray elements appended directly to document body by Mermaid
+      document
+        .querySelectorAll('body > [id^="dmermaid"], body > [id^="mermaid-svg-"], body > .mermaid-error')
+        .forEach((el) => {
+          if (!node.contains(el)) el.remove();
+        });
     } catch {
       // Ignore DOM cleanup errors
     }
   }
 
+  let renderTimer: ReturnType<typeof setTimeout> | null = null;
+  let renderSeq = 0;
+
   async function renderDiagram(opts: MermaidRenderOptions) {
+    const currentSeq = ++renderSeq;
+
     if (!opts.code || !opts.code.trim()) {
       node.innerHTML = '';
       opts.onError?.(null);
@@ -174,18 +179,21 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
     const renderId = `mermaid-svg-${Date.now()}-${++renderIdCounter}`;
 
     try {
-      // Test syntax parse first with error suppression
-      await mermaid.parse(opts.code, { suppressErrors: true });
+      // Test syntax parse first
+      await mermaid.parse(opts.code);
 
       // Render the diagram
       const { svg } = await mermaid.render(renderId, opts.code);
+
+      // Discard stale renders if another render was triggered while this was processing
+      if (currentSeq !== renderSeq) return;
+
       node.innerHTML = svg;
 
       const svgElement = node.querySelector('svg');
       if (svgElement) {
-        svgElement.style.width = '100%';
-        svgElement.style.height = '100%';
         svgElement.style.maxWidth = '100%';
+        svgElement.style.height = 'auto';
         svgElement.style.display = 'block';
         opts.onSuccess?.(svgElement);
       }
@@ -193,6 +201,8 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
       cleanupStrayMermaidNodes(renderId);
       opts.onError?.(null);
     } catch (err: any) {
+      if (currentSeq !== renderSeq) return;
+
       cleanupStrayMermaidNodes(renderId);
 
       const rawMsg = err?.message || String(err);
@@ -207,9 +217,13 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
   return {
     update(newOptions: MermaidRenderOptions) {
       options = newOptions;
-      renderDiagram(options);
+      if (renderTimer) clearTimeout(renderTimer);
+      renderTimer = setTimeout(() => {
+        renderDiagram(options);
+      }, 120);
     },
     destroy() {
+      if (renderTimer) clearTimeout(renderTimer);
       node.innerHTML = '';
     },
   };

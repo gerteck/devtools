@@ -45,7 +45,7 @@
   // Persistent config draft
   const DEFAULT_CONFIG = JSON.stringify(
     {
-      theme: 'default',
+      theme: 'auto',
     },
     null,
     2
@@ -73,6 +73,18 @@
     }
   });
 
+  // Detect whether custom theme is light (so dark mode displays a clear contrast card)
+  const isLightThemeConfig = $derived.by(() => {
+    try {
+      if (!mermaidConfig.trim()) return false;
+      const parsed = JSON.parse(mermaidConfig);
+      const t = parsed?.theme;
+      return t === 'default' || t === 'forest' || t === 'neutral';
+    } catch {
+      return false;
+    }
+  });
+
   // Watch document class for dark/light theme
   let isDark = $state(document.documentElement.classList.contains('dark'));
   let currentTheme = $derived(isDark ? 'devtools-dark' : 'devtools-light');
@@ -89,6 +101,7 @@
   let svgElement = $state<SVGSVGElement | null>(null);
   let panZoomCtrl = $state<PanZoomController | null>(null);
   let copied = $state(false);
+  let hasAutoFit = false;
 
   // Diagram presets
   const presets = [
@@ -100,9 +113,10 @@
 
   // Theme & Config presets (popular themes from mermaid.live)
   const themePresets = [
+    { label: 'Sync App', config: JSON.stringify({ theme: 'auto' }, null, 2) },
+    { label: 'Dark', config: JSON.stringify({ theme: 'dark' }, null, 2) },
     { label: 'Default', config: JSON.stringify({ theme: 'default' }, null, 2) },
     { label: 'Neutral', config: JSON.stringify({ theme: 'neutral' }, null, 2) },
-    { label: 'Dark', config: JSON.stringify({ theme: 'dark' }, null, 2) },
     { label: 'Forest', config: JSON.stringify({ theme: 'forest' }, null, 2) },
     {
       label: 'Base (Custom)',
@@ -120,7 +134,6 @@
       ),
     },
     { label: 'Hand-Drawn', config: JSON.stringify({ theme: 'default', look: 'handDrawn' }, null, 2) },
-    { label: 'Sync App', config: JSON.stringify({ theme: 'auto' }, null, 2) },
   ];
 
   function setPreset(code: string) {
@@ -368,7 +381,11 @@
       >
         <!-- The SVG Canvas target manipulated by panzoom -->
         <div
-          class="w-full h-full flex items-center justify-center pointer-events-auto"
+          class="transition-opacity duration-200 flex items-center justify-center rounded-lg p-3 pointer-events-auto {isDark && isLightThemeConfig
+            ? 'bg-white text-zinc-900 shadow-md'
+            : isDark
+              ? 'bg-zinc-900/60 shadow-inner'
+              : 'bg-white shadow-xs'}"
           use:useMermaidRender={{
             code: mermaidCode,
             config: mermaidConfig,
@@ -379,6 +396,10 @@
             },
             onSuccess: (node) => {
               svgElement = node;
+              if (!hasAutoFit) {
+                hasAutoFit = true;
+                setTimeout(() => panZoomCtrl?.fitToScreen(), 60);
+              }
             },
           }}
         ></div>
