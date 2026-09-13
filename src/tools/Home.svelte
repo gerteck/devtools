@@ -33,16 +33,16 @@
 
 <svelte:window onkeydown={handleSlashKey} />
 
-<div class="max-w-5xl mx-auto px-6 py-12 md:py-16 w-full flex-1 flex flex-col justify-center">
+<div class="w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-6 py-10 md:py-14 flex-1 flex flex-col justify-center">
   <!-- Hero Section -->
-  <div class="text-left max-w-2xl mx-auto mb-10 w-full">
-    <h1 class="text-2xl font-semibold tracking-tight text-on-surface mb-2 font-mono">devtools</h1>
+  <div class="text-left max-w-2xl mb-8 w-full">
+    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface mb-2 font-mono">devtools</h1>
     <p class="text-sm text-on-surface-variant font-normal leading-relaxed">
-      A small collection of lightweight tools for development.
+      A small collection of lightweight everyday tools for web development.
     </p>
 
     <!-- Search Input -->
-    <div class="mt-6 relative max-w-md">
+    <div class="mt-6 relative max-w-lg">
       <div class="relative flex items-center bg-surface border border-outline-variant rounded-lg hover:border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
         <span class="text-outline ml-3 pointer-events-none flex items-center">
           <Search size={16} />

@@ -15,7 +15,13 @@
     CheckCircle2,
   } from '@lucide/svelte';
 
-  let { initialTab = 'editor' }: { initialTab?: 'editor' | 'tree' } = $props();
+  let {
+    initialTab = 'editor',
+    theme = 'devtools-dark',
+  }: {
+    initialTab?: 'editor' | 'tree';
+    theme?: string;
+  } = $props();
 
   let activeTab = $state<'editor' | 'tree'>('editor');
   $effect(() => {
@@ -212,7 +218,7 @@
         use:useMonacoEditor={{
           value: rawJson,
           language: 'json',
-          theme: currentTheme,
+          theme: theme,
           onChange: (val) => (rawJson = val),
         }}
       ></div>

@@ -18,6 +18,17 @@
     Copy,
     Check,
   } from '@lucide/svelte';
+  import type { ColorScheme, ThemeMode } from '../types';
+
+  let {
+    theme = 'dark',
+    scheme = 'default',
+    monacoTheme = 'devtools-dark',
+  }: {
+    theme?: ThemeMode;
+    scheme?: ColorScheme;
+    monacoTheme?: string;
+  } = $props();
 
   // Persistent draft
   const mermaidDraft = createPersistedState('devtools_mermaid_draft', SAMPLES.mermaidFlowchart);
@@ -152,7 +163,7 @@
         use:useMonacoEditor={{
           value: mermaidCode,
           language: 'mermaid',
-          theme: currentTheme,
+          theme: monacoTheme,
           onChange: (val) => (mermaidCode = val),
         }}
       ></div>
@@ -220,7 +231,8 @@
           class="w-full h-full flex items-center justify-center pointer-events-auto"
           use:useMermaidRender={{
             code: mermaidCode,
-            theme: isDark ? 'dark' : 'light',
+            scheme: scheme,
+            theme: theme,
             onError: (err) => {
               parseError = err ? err.message : null;
             },

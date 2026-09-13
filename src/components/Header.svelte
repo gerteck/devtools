@@ -1,22 +1,32 @@
 <script lang="ts">
   import { router } from '../router.svelte';
-  import type { Route } from '../types';
-  import { Moon, Sun, Terminal } from '@lucide/svelte';
+  import type { Route, ColorScheme, ThemeMode } from '../types';
+  import { Moon, Sun, Terminal, Palette } from '@lucide/svelte';
   import pkg from '../../package.json';
 
   let {
+    scheme = 'default',
     theme = 'dark',
+    onSelectScheme,
     onToggleTheme,
-    currentRoute = '/'
   }: {
-    theme: 'dark' | 'light';
+    scheme: ColorScheme;
+    theme: ThemeMode;
+    onSelectScheme: (s: ColorScheme) => void;
     onToggleTheme: () => void;
-    currentRoute: Route;
+    currentRoute?: Route;
   } = $props();
+
+  const schemes: { id: ColorScheme; label: string }[] = [
+    { id: 'default', label: 'Zinc (Default)' },
+    { id: 'gruvbox', label: 'Gruvbox' },
+    { id: 'catppuccin', label: 'Catppuccin' },
+    { id: 'nord', label: 'Nord' },
+  ];
 </script>
 
 <header class="sticky top-0 z-50 w-full bg-surface/85 backdrop-blur-md border-b border-outline-variant transition-colors duration-200">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+  <div class="w-full px-4 sm:px-6 h-14 flex items-center justify-between">
     <!-- Brand Logo & Badge -->
     <div class="flex items-center gap-3">
       <button
@@ -35,13 +45,29 @@
       </span>
     </div>
 
-    <!-- Right Controls: Theme Switcher -->
-    <div class="flex items-center gap-3">
+    <!-- Right Controls: Scheme Selector & Mode Switcher -->
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      <!-- Color Scheme Selector -->
+      <div class="flex items-center gap-1.5 bg-surface-container border border-outline-variant rounded-lg px-2 py-1">
+        <Palette size={13} class="text-on-surface-variant shrink-0" />
+        <select
+          value={scheme}
+          onchange={(e) => onSelectScheme((e.target as HTMLSelectElement).value as ColorScheme)}
+          class="bg-transparent text-xs font-mono text-on-surface border-none focus:outline-none focus:ring-0 p-0 pr-4 cursor-pointer"
+          title="Choose Color Scheme"
+        >
+          {#each schemes as s}
+            <option value={s.id} class="bg-surface text-on-surface">{s.label}</option>
+          {/each}
+        </select>
+      </div>
+
+      <!-- Theme Mode Switcher -->
       <button
         onclick={onToggleTheme}
-        aria-label="Toggle theme"
+        aria-label="Toggle theme mode"
         class="p-1.5 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center cursor-pointer"
-        title="Toggle Theme"
+        title="Toggle Light/Dark Mode"
       >
         {#if theme === 'dark'}
           <Sun size={15} />

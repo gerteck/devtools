@@ -13,6 +13,12 @@
     Check,
   } from '@lucide/svelte';
 
+  let {
+    theme = 'devtools-dark',
+  }: {
+    theme?: string;
+  } = $props();
+
   const origDraft = createPersistedState('devtools_diff_orig', SAMPLES.diffOriginal);
   const modDraft = createPersistedState('devtools_diff_mod', SAMPLES.diffModified);
   const langDraft = createPersistedState('devtools_diff_lang', 'json');
@@ -225,7 +231,7 @@
         original: original,
         modified: modified,
         language: selectedLanguage,
-        theme: currentTheme,
+        theme: theme,
         originalEditable: true,
         renderSideBySide: isSideBySide,
         onOriginalChange: (val) => (original = val),

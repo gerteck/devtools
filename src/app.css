@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* Default Theme: Light */
+  :root,
+  [data-theme="default"] {
     --color-bg: #fafafa;
     --color-surface: #ffffff;
     --color-surface-low: #f8f9fa;
@@ -21,7 +23,9 @@
     --color-on-secondary-container: #065f46;
   }
 
-  html.dark {
+  /* Default Theme: Dark */
+  html.dark,
+  [data-theme="default"].dark {
     --color-bg: #09090b;
     --color-surface: #121215;
     --color-surface-low: #18181b;
@@ -39,10 +43,129 @@
     --color-on-secondary-container: #a7f3d0;
   }
 
+  /* Gruvbox: Light */
+  [data-theme="gruvbox"] {
+    --color-bg: #fbf1c7;
+    --color-surface: #f2e5bc;
+    --color-surface-low: #f9f5d7;
+    --color-surface-container: #ebdbb2;
+    --color-surface-high: #d5c4a1;
+    --color-on-surface: #282828;
+    --color-on-surface-variant: #665c54;
+    --color-outline: #bdae93;
+    --color-outline-variant: #d5c4a1;
+    --color-primary: #af3a03;
+    --color-primary-container: #fe801930;
+    --color-on-primary-container: #9d0006;
+    --color-secondary: #79740e;
+    --color-secondary-container: #b8bb2630;
+    --color-on-secondary-container: #427b58;
+  }
+
+  /* Gruvbox: Dark */
+  [data-theme="gruvbox"].dark {
+    --color-bg: #282828;
+    --color-surface: #1d2021;
+    --color-surface-low: #32302f;
+    --color-surface-container: #3c3836;
+    --color-surface-high: #504945;
+    --color-on-surface: #ebdbb2;
+    --color-on-surface-variant: #a89984;
+    --color-outline: #665c54;
+    --color-outline-variant: #504945;
+    --color-primary: #fe8019;
+    --color-primary-container: #fe801925;
+    --color-on-primary-container: #fabd2f;
+    --color-secondary: #b8bb26;
+    --color-secondary-container: #b8bb2625;
+    --color-on-secondary-container: #8ec07c;
+  }
+
+  /* Catppuccin: Light (Latte) */
+  [data-theme="catppuccin"] {
+    --color-bg: #eff1f5;
+    --color-surface: #ffffff;
+    --color-surface-low: #e6e9ef;
+    --color-surface-container: #dce0e8;
+    --color-surface-high: #ccd0da;
+    --color-on-surface: #4c4f69;
+    --color-on-surface-variant: #6c6f85;
+    --color-outline: #9ca0b0;
+    --color-outline-variant: #bcc0cc;
+    --color-primary: #8839ef;
+    --color-primary-container: #8839ef20;
+    --color-on-primary-container: #7287fd;
+    --color-secondary: #40a02b;
+    --color-secondary-container: #40a02b20;
+    --color-on-secondary-container: #179299;
+  }
+
+  /* Catppuccin: Dark (Mocha) */
+  [data-theme="catppuccin"].dark {
+    --color-bg: #1e1e2e;
+    --color-surface: #181825;
+    --color-surface-low: #11111b;
+    --color-surface-container: #313244;
+    --color-surface-high: #45475a;
+    --color-on-surface: #cdd6f4;
+    --color-on-surface-variant: #a6adc8;
+    --color-outline: #585b70;
+    --color-outline-variant: #313244;
+    --color-primary: #cba6f7;
+    --color-primary-container: #cba6f725;
+    --color-on-primary-container: #b4befe;
+    --color-secondary: #a6e3a1;
+    --color-secondary-container: #a6e3a125;
+    --color-on-secondary-container: #94e2d5;
+  }
+
+  /* Nord: Light */
+  [data-theme="nord"] {
+    --color-bg: #eceff4;
+    --color-surface: #ffffff;
+    --color-surface-low: #e5e9f0;
+    --color-surface-container: #e5e9f0;
+    --color-surface-high: #d8dee9;
+    --color-on-surface: #2e3440;
+    --color-on-surface-variant: #4c566a;
+    --color-outline: #9baec8;
+    --color-outline-variant: #d8dee9;
+    --color-primary: #5e81ac;
+    --color-primary-container: #5e81ac20;
+    --color-on-primary-container: #434c5e;
+    --color-secondary: #8fbcbb;
+    --color-secondary-container: #8fbcbb25;
+    --color-on-secondary-container: #2e3440;
+  }
+
+  /* Nord: Dark */
+  [data-theme="nord"].dark {
+    --color-bg: #2e3440;
+    --color-surface: #242933;
+    --color-surface-low: #1f232a;
+    --color-surface-container: #3b4252;
+    --color-surface-high: #434c5e;
+    --color-on-surface: #eceff4;
+    --color-on-surface-variant: #d8dee9;
+    --color-outline: #4c566a;
+    --color-outline-variant: #3b4252;
+    --color-primary: #88c0d0;
+    --color-primary-container: #88c0d025;
+    --color-on-primary-container: #8fbcbb;
+    --color-secondary: #a3be8c;
+    --color-secondary-container: #a3be8c25;
+    --color-on-secondary-container: #b48ead;
+  }
+
   html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-on-surface);
   }
 
   /* Custom subtle scrollbar */

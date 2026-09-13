@@ -7,23 +7,38 @@
   import JsonSuite from './tools/JsonSuite.svelte';
   import DiffChecker from './tools/DiffChecker.svelte';
   import MermaidStudio from './tools/MermaidStudio.svelte';
+  import type { ColorScheme, ThemeMode } from './types';
+  import { getMonacoThemeName } from './utils/monaco';
 
-  // Initialize theme from localStorage or default to dark
-  let theme = $state<'dark' | 'light'>(
-    (typeof localStorage !== 'undefined' && (localStorage.getItem('devtools_theme') as 'dark' | 'light')) || 'dark'
+  // Initialize theme mode and color scheme from localStorage
+  let mode = $state<ThemeMode>(
+    (typeof localStorage !== 'undefined' && (localStorage.getItem('devtools_theme') as ThemeMode)) || 'dark'
   );
 
+  let scheme = $state<ColorScheme>(
+    (typeof localStorage !== 'undefined' && (localStorage.getItem('devtools_scheme') as ColorScheme)) || 'default'
+  );
+
+  // Sync DOM and persistence
   $effect(() => {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('devtools_theme', theme);
+      localStorage.setItem('devtools_theme', mode);
+      localStorage.setItem('devtools_scheme', scheme);
     }
     if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', theme === 'dark');
+      document.documentElement.setAttribute('data-theme', scheme);
+      document.documentElement.classList.toggle('dark', mode === 'dark');
     }
   });
 
-  function toggleTheme() {
-    theme = theme === 'dark' ? 'light' : 'dark';
+  const monacoTheme = $derived(getMonacoThemeName(scheme, mode));
+
+  function toggleMode() {
+    mode = mode === 'dark' ? 'light' : 'dark';
+  }
+
+  function selectScheme(newScheme: ColorScheme) {
+    scheme = newScheme;
   }
 
   // Global keyboard shortcuts (⌘1, ⌘2, ⌘3, ⌘0)
@@ -48,9 +63,15 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="h-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden select-none">
+<div class="h-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden select-none transition-colors duration-200">
   <!-- Top Navigation Header -->
-  <Header {theme} onToggleTheme={toggleTheme} currentRoute={router.currentRoute} />
+  <Header
+    {scheme}
+    theme={mode}
+    onSelectScheme={selectScheme}
+    onToggleTheme={toggleMode}
+    currentRoute={router.currentRoute}
+  />
 
   <!-- App Body: Sidebar Rail + Tool Content -->
   <div class="flex-1 flex min-h-0 overflow-hidden">
@@ -60,11 +81,11 @@
       {#if router.currentRoute === '/'}
         <Home />
       {:else if router.currentRoute === '/json'}
-        <JsonSuite />
+        <JsonSuite theme={monacoTheme} />
       {:else if router.currentRoute === '/diff'}
-        <DiffChecker />
+        <DiffChecker theme={monacoTheme} />
       {:else if router.currentRoute === '/mermaid'}
-        <MermaidStudio />
+        <MermaidStudio {scheme} theme={mode} {monacoTheme} />
       {/if}
     </main>
   </div>

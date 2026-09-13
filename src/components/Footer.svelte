@@ -11,7 +11,7 @@
 </script>
 
 <footer class="w-full border-t border-outline-variant bg-surface py-3.5 select-none shrink-0 transition-colors">
-  <div class="max-w-7xl mx-auto px-6 flex items-center justify-end gap-4 text-xs font-mono text-on-surface-variant">
+  <div class="w-full px-4 sm:px-6 flex items-center justify-end gap-4 text-xs font-mono text-on-surface-variant">
     <button
       onclick={() => (showShortcutsModal = true)}
       class="hover:text-on-surface transition-colors cursor-pointer"

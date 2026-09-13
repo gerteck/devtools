@@ -1,5 +1,8 @@
 export type Route = '/' | '/json' | '/diff' | '/mermaid';
 
+export type ColorScheme = 'default' | 'gruvbox' | 'catppuccin' | 'nord';
+export type ThemeMode = 'dark' | 'light';
+
 export interface ToolItem {
   id: string;
   name: string;
