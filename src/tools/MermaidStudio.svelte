@@ -172,16 +172,35 @@
 
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Top Toolbar -->
-  <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
+  <div class="h-12 border-b border-outline-variant bg-surface px-2 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0 font-mono text-xs overflow-x-auto no-scrollbar">
     <!-- Presets bar: switches based on active tab -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
       {#if activeTab === 'code'}
-        <div class="flex items-center gap-1.5 text-on-surface-variant">
+        <!-- Mobile Dropdown for Presets -->
+        <div class="sm:hidden flex items-center gap-1">
+          <Sparkles size={13} class="text-primary dark:text-indigo-400 shrink-0" />
+          <select
+            onchange={(e) => {
+              const p = presets.find((x) => x.label === (e.target as HTMLSelectElement).value);
+              if (p) setPreset(p.code);
+            }}
+            class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary max-w-[125px] cursor-pointer"
+            title="Choose diagram template"
+          >
+            <option value="" disabled selected>Templates...</option>
+            {#each presets as preset}
+              <option value={preset.label}>{preset.label}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Desktop Pills for Presets -->
+        <div class="hidden sm:flex items-center gap-1.5 text-on-surface-variant">
           <Sparkles size={13} class="text-primary dark:text-indigo-400" />
           <span class="font-medium">Diagrams:</span>
         </div>
 
-        <div class="flex items-center gap-1.5 flex-wrap">
+        <div class="hidden sm:flex items-center gap-1.5 flex-wrap">
           {#each presets as preset}
             <button
               onclick={() => setPreset(preset.code)}
@@ -192,12 +211,31 @@
           {/each}
         </div>
       {:else}
-        <div class="flex items-center gap-1.5 text-on-surface-variant">
+        <!-- Mobile Dropdown for Theme Presets -->
+        <div class="sm:hidden flex items-center gap-1">
+          <Palette size={13} class="text-primary dark:text-indigo-400 shrink-0" />
+          <select
+            onchange={(e) => {
+              const p = themePresets.find((x) => x.label === (e.target as HTMLSelectElement).value);
+              if (p) mermaidConfig = p.config;
+            }}
+            class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary max-w-[125px] cursor-pointer"
+            title="Choose theme preset"
+          >
+            <option value="" disabled selected>Themes...</option>
+            {#each themePresets as preset}
+              <option value={preset.label}>{preset.label}</option>
+            {/each}
+          </select>
+        </div>
+
+        <!-- Desktop Pills for Themes -->
+        <div class="hidden sm:flex items-center gap-1.5 text-on-surface-variant">
           <Palette size={13} class="text-primary dark:text-indigo-400" />
           <span class="font-medium">Theme Presets:</span>
         </div>
 
-        <div class="flex items-center gap-1.5 flex-wrap">
+        <div class="hidden sm:flex items-center gap-1.5 flex-wrap">
           {#each themePresets as preset}
             <button
               onclick={() => (mermaidConfig = preset.config)}
@@ -211,18 +249,18 @@
     </div>
 
     <!-- Right Controls: Copy, SVG/PNG Export -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <button
         onclick={handleCopy}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         title={activeTab === 'code' ? 'Copy Mermaid Code' : 'Copy Config JSON'}
       >
         {#if copied}
           <Check size={12} class="text-secondary" />
-          <span>Copied!</span>
+          <span class="hidden sm:inline">Copied!</span>
         {:else}
           <Copy size={12} />
-          <span>{activeTab === 'code' ? 'Copy Code' : 'Copy Config'}</span>
+          <span class="hidden sm:inline">{activeTab === 'code' ? 'Copy Code' : 'Copy Config'}</span>
         {/if}
       </button>
 
@@ -232,7 +270,8 @@
       <button
         onclick={handleExportSvg}
         disabled={!svgElement || !!parseError}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs"
+        title="Download SVG vector file"
       >
         <FileCode size={13} />
         <span>SVG</span>
@@ -242,7 +281,8 @@
       <button
         onclick={handleExportPng}
         disabled={!svgElement || !!parseError}
-        class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs"
+        title="Download PNG image"
       >
         <ImageIcon size={13} />
         <span>PNG</span>

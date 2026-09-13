@@ -158,73 +158,79 @@
 
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Toolbar Header -->
-  <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
+  <div class="h-12 border-b border-outline-variant bg-surface px-2 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0 font-mono text-xs overflow-x-auto no-scrollbar">
     <!-- Tab Switcher: Editor | Tree View | JSON Schema | TypeScript -->
-    <div class="flex items-center gap-1 bg-surface-container p-0.5 rounded-lg border border-outline-variant">
+    <div class="flex items-center gap-0.5 sm:gap-1 bg-surface-container p-0.5 rounded-lg border border-outline-variant shrink-0">
       <button
         onclick={() => (activeTab = 'editor')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'editor'
+        class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'editor'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
-        <Braces size={14} />
-        <span>Editor</span>
+        <Braces size={13} />
+        <span class="hidden sm:inline">Editor</span>
+        <span class="sm:hidden text-[11px]">Edit</span>
       </button>
 
       <button
         onclick={() => (activeTab = 'tree')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'tree'
+        class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'tree'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
-        <Network size={14} />
-        <span>Tree View</span>
+        <Network size={13} />
+        <span class="hidden sm:inline">Tree View</span>
+        <span class="sm:hidden text-[11px]">Tree</span>
       </button>
 
       <button
         onclick={() => (activeTab = 'schema')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'schema'
+        class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'schema'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
-        <FileJson size={14} />
-        <span>JSON Schema</span>
+        <FileJson size={13} />
+        <span class="hidden sm:inline">JSON Schema</span>
+        <span class="sm:hidden text-[11px]">Schema</span>
       </button>
 
       <button
         onclick={() => (activeTab = 'typescript')}
-        class="flex items-center gap-1.5 px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'typescript'
+        class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md transition-all cursor-pointer {activeTab === 'typescript'
           ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
           : 'text-on-surface-variant hover:text-on-surface'}"
       >
-        <CodeXml size={14} />
-        <span>TypeScript</span>
+        <CodeXml size={13} />
+        <span class="hidden sm:inline">TypeScript</span>
+        <span class="sm:hidden text-[11px]">TS</span>
       </button>
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 sm:gap-2 shrink-0">
       {#if activeTab === 'editor' || activeTab === 'tree'}
         <button
           onclick={loadSample}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
           title="Load sample JSON"
         >
           <Sparkles size={12} />
-          <span>Sample</span>
+          <span class="hidden sm:inline">Sample</span>
         </button>
 
         <div class="flex items-center rounded border border-outline-variant bg-surface-container overflow-hidden">
           <button
             onclick={() => { indentSpaces = 2; formatJson(2); }}
-            class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 2 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            title="Format with 2 spaces indentation"
           >
             2 sp
           </button>
           <div class="w-px h-3.5 bg-outline-variant"></div>
           <button
             onclick={() => { indentSpaces = 4; formatJson(4); }}
-            class="px-2 py-1 transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            class="px-1.5 sm:px-2 py-1 text-[11px] sm:text-xs transition-colors cursor-pointer {indentSpaces === 4 ? 'bg-primary text-white font-semibold' : 'text-on-surface-variant hover:text-on-surface'}"
+            title="Format with 4 spaces indentation"
           >
             4 sp
           </button>
@@ -232,74 +238,85 @@
 
         <button
           onclick={minifyJson}
-          class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          class="px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-[11px] sm:text-xs"
+          title="Minify JSON (remove whitespace)"
         >
-          Minify
+          <span class="hidden sm:inline">Minify</span>
+          <span class="sm:hidden">Min</span>
         </button>
 
         <button
           onclick={() => copyText(rawJson)}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          title="Copy raw JSON"
         >
           {#if copied}
             <Check size={12} class="text-secondary" />
-            <span>Copied!</span>
+            <span class="hidden sm:inline">Copied!</span>
           {:else}
             <Copy size={12} />
-            <span>Copy</span>
+            <span class="hidden sm:inline">Copy</span>
           {/if}
         </button>
 
         <button
           onclick={clearJson}
-          class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
+          class="p-1 sm:p-1.5 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
           title="Clear Input"
         >
-          <Trash2 size={14} />
+          <Trash2 size={13} />
         </button>
 
       {:else if activeTab === 'schema'}
         <button
           onclick={() => copyText(generatedSchema)}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          title="Copy Schema"
         >
           {#if copied}
             <Check size={12} class="text-secondary" />
             <span>Copied!</span>
           {:else}
             <Copy size={12} />
-            <span>Copy Schema</span>
+            <span class="hidden sm:inline">Copy Schema</span>
+            <span class="sm:hidden">Copy</span>
           {/if}
         </button>
 
         <button
           onclick={() => downloadFile(generatedSchema, 'schema.json', 'application/json')}
-          class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+          title="Download JSON Schema"
         >
           <Download size={13} />
-          <span>Download .json</span>
+          <span class="hidden sm:inline">Download .json</span>
+          <span class="sm:hidden">.json</span>
         </button>
 
       {:else if activeTab === 'typescript'}
         <button
           onclick={() => copyText(generatedTypes)}
-          class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+          title="Copy TypeScript definitions"
         >
           {#if copied}
             <Check size={12} class="text-secondary" />
             <span>Copied!</span>
           {:else}
             <Copy size={12} />
-            <span>Copy Types</span>
+            <span class="hidden sm:inline">Copy Types</span>
+            <span class="sm:hidden">Copy</span>
           {/if}
         </button>
 
         <button
           onclick={() => downloadFile(generatedTypes, 'types.ts', 'text/typescript')}
-          class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors cursor-pointer"
+          title="Download TypeScript file"
         >
           <Download size={13} />
-          <span>Download .ts</span>
+          <span class="hidden sm:inline">Download .ts</span>
+          <span class="sm:hidden">.ts</span>
         </button>
       {/if}
     </div>

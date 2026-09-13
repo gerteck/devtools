@@ -223,15 +223,34 @@
 
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Top Toolbar -->
-  <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
+  <div class="h-12 border-b border-outline-variant bg-surface px-2 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0 font-mono text-xs overflow-x-auto no-scrollbar">
     <!-- Left: Presets & Server config -->
-    <div class="flex items-center gap-3">
-      <div class="flex items-center gap-1.5 text-on-surface-variant">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <!-- Mobile Dropdown for Presets -->
+      <div class="sm:hidden flex items-center gap-1">
+        <Sparkles size={13} class="text-primary dark:text-indigo-400 shrink-0" />
+        <select
+          onchange={(e) => {
+            const p = presets.find((x) => x.label === (e.target as HTMLSelectElement).value);
+            if (p) setPreset(p.code);
+          }}
+          class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary max-w-[125px] cursor-pointer"
+          title="Choose diagram template"
+        >
+          <option value="" disabled selected>Templates...</option>
+          {#each presets as preset}
+            <option value={preset.label}>{preset.label}</option>
+          {/each}
+        </select>
+      </div>
+
+      <!-- Desktop Pills for Presets -->
+      <div class="hidden sm:flex items-center gap-1.5 text-on-surface-variant">
         <Sparkles size={13} class="text-primary dark:text-indigo-400" />
         <span class="font-medium">Presets:</span>
       </div>
 
-      <div class="flex items-center gap-1.5 flex-wrap">
+      <div class="hidden sm:flex items-center gap-1.5 flex-wrap">
         {#each presets as preset}
           <button
             onclick={() => setPreset(preset.code)}
@@ -242,24 +261,24 @@
         {/each}
       </div>
 
-      <div class="h-4 w-px bg-outline-variant hidden sm:block"></div>
+      <div class="h-4 w-px bg-outline-variant"></div>
 
       <!-- Server Settings Trigger -->
       <button
         onclick={() => (showServerModal = !showServerModal)}
-        class="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         title="Configure PlantUML Server Endpoint"
       >
         <Server size={12} class="text-primary dark:text-indigo-400" />
-        <span>Server</span>
+        <span class="hidden sm:inline">Server</span>
       </button>
     </div>
 
     <!-- Right Controls: Status, Code Copy, SVG/PNG Export -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <!-- In-flight Loading Spinner -->
       {#if isLoading}
-        <div class="flex items-center gap-1 px-2 py-0.5 text-on-surface-variant text-[11px]">
+        <div class="flex items-center gap-1 px-1 sm:px-2 py-0.5 text-on-surface-variant text-[11px]">
           <Loader2 size={12} class="animate-spin text-primary dark:text-indigo-400" />
           <span class="hidden sm:inline">Rendering...</span>
         </div>
@@ -267,15 +286,15 @@
 
       <button
         onclick={handleCopyCode}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         title="Copy PlantUML DSL Code"
       >
         {#if copied}
           <Check size={12} class="text-secondary" />
-          <span>Copied!</span>
+          <span class="hidden sm:inline">Copied!</span>
         {:else}
           <Copy size={12} />
-          <span>Copy Code</span>
+          <span class="hidden sm:inline">Copy Code</span>
         {/if}
       </button>
 
@@ -285,7 +304,8 @@
       <button
         onclick={handleExportSvg}
         disabled={!svgElement || isLoading || hasSyntaxWarning}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs"
+        title="Download SVG vector file"
       >
         <FileCode size={13} />
         <span>SVG</span>
@@ -295,7 +315,8 @@
       <button
         onclick={handleExportPng}
         disabled={!svgElement || isLoading || hasSyntaxWarning}
-        class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs"
+        title="Download PNG image"
       >
         <ImageIcon size={13} />
         <span>PNG</span>

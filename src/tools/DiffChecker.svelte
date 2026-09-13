@@ -22,10 +22,11 @@
     theme?: string;
   } = $props();
 
+  const defaultSideBySide = typeof window !== 'undefined' ? window.innerWidth >= 640 : true;
   const origDraft = createPersistedState('devtools_diff_orig', SAMPLES.diffOriginal);
   const modDraft = createPersistedState('devtools_diff_mod', SAMPLES.diffModified);
   const langDraft = createPersistedState('devtools_diff_lang', 'json');
-  const sideBySideDraft = createPersistedState('devtools_diff_side_by_side', true);
+  const sideBySideDraft = createPersistedState('devtools_diff_side_by_side', defaultSideBySide);
   const onlyDiffsDraft = createPersistedState('devtools_diff_only_diffs', false);
   const contextLinesDraft = createPersistedState('devtools_diff_context_lines', 3);
 
@@ -121,23 +122,23 @@
 
 <div class="flex-1 flex flex-col h-full bg-background overflow-hidden">
   <!-- Toolbar Header -->
-  <div class="h-12 border-b border-outline-variant bg-surface px-4 flex items-center justify-between gap-3 shrink-0 font-mono text-xs">
+  <div class="h-12 border-b border-outline-variant bg-surface px-2 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0 font-mono text-xs overflow-x-auto no-scrollbar">
     <!-- Left: Tool Title & Language Dropdown -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
       <div class="flex items-center gap-1.5 font-semibold text-on-surface">
         <GitCompare size={15} class="text-primary dark:text-indigo-400" />
-        <span>Diff Checker</span>
+        <span class="hidden sm:inline">Diff Checker</span>
       </div>
 
-      <div class="h-4 w-px bg-outline-variant"></div>
+      <div class="h-4 w-px bg-outline-variant hidden sm:block"></div>
 
       <!-- Language Selector -->
-      <div class="flex items-center gap-1.5">
-        <label for="diff-lang" class="text-on-surface-variant text-[11px]">Language:</label>
+      <div class="flex items-center gap-1">
+        <label for="diff-lang" class="text-on-surface-variant text-[11px] hidden sm:inline">Language:</label>
         <select
           id="diff-lang"
           bind:value={selectedLanguage}
-          class="bg-surface-container border border-outline-variant text-on-surface rounded px-2 py-0.5 text-xs font-mono focus:outline-none focus:border-primary cursor-pointer"
+          class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 sm:px-2 py-0.5 text-xs font-mono focus:outline-none focus:border-primary cursor-pointer max-w-[85px] sm:max-w-none"
         >
           {#each languages as lang}
             <option value={lang.value}>{lang.label}</option>
@@ -149,23 +150,23 @@
       <div class="flex items-center bg-surface-container p-0.5 rounded border border-outline-variant">
         <button
           onclick={() => (isSideBySide = true)}
-          class="flex items-center gap-1 px-2 py-0.5 rounded transition-all cursor-pointer {isSideBySide
+          class="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded transition-all cursor-pointer {isSideBySide
             ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
             : 'text-on-surface-variant hover:text-on-surface'}"
           title="Side by Side (Split View)"
         >
           <Columns2 size={13} />
-          <span class="text-[11px]">Split</span>
+          <span class="text-[11px] hidden sm:inline">Split</span>
         </button>
         <button
           onclick={() => (isSideBySide = false)}
-          class="flex items-center gap-1 px-2 py-0.5 rounded transition-all cursor-pointer {!isSideBySide
+          class="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded transition-all cursor-pointer {!isSideBySide
             ? 'bg-surface text-primary dark:text-indigo-400 font-semibold shadow-xs'
             : 'text-on-surface-variant hover:text-on-surface'}"
           title="Inline (Unified View)"
         >
           <Rows2 size={13} />
-          <span class="text-[11px]">Unified</span>
+          <span class="text-[11px] hidden sm:inline">Unified</span>
         </button>
       </div>
 
@@ -174,27 +175,27 @@
       <!-- Show Only Diffs Toggle -->
       <button
         onclick={() => (showOnlyDiffs = !showOnlyDiffs)}
-        class="flex items-center gap-1.5 px-2 py-1 rounded transition-all cursor-pointer {showOnlyDiffs
+        class="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded transition-all cursor-pointer {showOnlyDiffs
           ? 'bg-primary/10 text-primary border border-primary/40 font-semibold shadow-xs'
           : 'bg-surface-container text-on-surface-variant hover:text-on-surface border border-outline-variant'}"
         title="Show only diffs and collapse unchanged code lines"
       >
         <Filter size={12} class={showOnlyDiffs ? 'text-primary' : 'text-on-surface-variant'} />
-        <span class="text-[11px]">Diffs Only</span>
+        <span class="text-[11px] hidden sm:inline">Diffs Only</span>
       </button>
 
       {#if showOnlyDiffs}
         <div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
-          <span>Context:</span>
+          <span class="hidden sm:inline">Context:</span>
           <select
             bind:value={contextLines}
-            class="bg-surface-container border border-outline-variant text-on-surface rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary cursor-pointer"
+            class="bg-surface-container border border-outline-variant text-on-surface rounded px-1 sm:px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-primary cursor-pointer"
             title="Lines of unchanged context around differences"
           >
-            <option value={1}>1 line</option>
-            <option value={3}>3 lines</option>
-            <option value={5}>5 lines</option>
-            <option value={10}>10 lines</option>
+            <option value={1}>1L</option>
+            <option value={3}>3L</option>
+            <option value={5}>5L</option>
+            <option value={10}>10L</option>
           </select>
         </div>
       {/if}
@@ -221,12 +222,12 @@
 
       <!-- Diff count badge -->
       {#if diffStats.changesCount === 0}
-        <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+        <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
           <Check size={11} />
           <span>Identical</span>
         </span>
       {:else}
-        <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
+        <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
           <span class="font-medium text-on-surface">{diffStats.changesCount} diff{diffStats.changesCount > 1 ? 's' : ''}</span>
           <span class="text-emerald-600 dark:text-emerald-400 font-semibold">+{diffStats.additions}</span>
           <span class="text-rose-600 dark:text-rose-400 font-semibold">-{diffStats.deletions}</span>
@@ -235,23 +236,23 @@
     </div>
 
     <!-- Right: Actions -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <button
         onclick={loadSample}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         title="Load sample JSON comparison"
       >
         <Sparkles size={12} />
-        <span>Sample</span>
+        <span class="hidden sm:inline">Sample</span>
       </button>
 
       <button
         onclick={swapSides}
-        class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
         title="Swap Original and Modified panes"
       >
         <ArrowLeftRight size={12} />
-        <span>Swap</span>
+        <span class="hidden sm:inline">Swap</span>
       </button>
 
       <div class="h-4 w-px bg-outline-variant"></div>
@@ -259,38 +260,42 @@
       <!-- Copy Left / Right -->
       <button
         onclick={() => copyText('orig')}
-        class="flex items-center gap-1 px-2 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-[11px]"
         title="Copy Original (Left)"
       >
         {#if copiedSide === 'orig'}
           <Check size={12} class="text-secondary" />
-          <span>Copied Left!</span>
+          <span class="hidden sm:inline">Copied Left!</span>
+          <span class="sm:hidden">✓L</span>
         {:else}
           <Copy size={12} />
-          <span>Copy Left</span>
+          <span class="hidden sm:inline">Copy Left</span>
+          <span class="sm:hidden">L</span>
         {/if}
       </button>
 
       <button
         onclick={() => copyText('mod')}
-        class="flex items-center gap-1 px-2 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+        class="flex items-center gap-1 px-2 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-[11px]"
         title="Copy Modified (Right)"
       >
         {#if copiedSide === 'mod'}
           <Check size={12} class="text-secondary" />
-          <span>Copied Right!</span>
+          <span class="hidden sm:inline">Copied Right!</span>
+          <span class="sm:hidden">✓R</span>
         {:else}
           <Copy size={12} />
-          <span>Copy Right</span>
+          <span class="hidden sm:inline">Copy Right</span>
+          <span class="sm:hidden">R</span>
         {/if}
       </button>
 
       <button
         onclick={clearAll}
-        class="p-1 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
+        class="p-1 sm:p-1.5 rounded border border-outline-variant hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-500 transition-colors cursor-pointer"
         title="Clear Both Panes"
       >
-        <Trash2 size={14} />
+        <Trash2 size={13} />
       </button>
     </div>
   </div>

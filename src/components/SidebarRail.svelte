@@ -15,7 +15,7 @@
   ];
 </script>
 
-<aside class="w-14 shrink-0 bg-surface border-r border-outline-variant flex flex-col items-center py-3 gap-2 z-20 select-none">
+<aside class="hidden md:flex w-14 shrink-0 bg-surface border-r border-outline-variant flex-col items-center py-3 gap-2 z-20 select-none">
   {#each navItems as item}
     {@const isActive = currentRoute === item.route}
     <button
