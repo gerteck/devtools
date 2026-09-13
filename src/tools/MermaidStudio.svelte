@@ -71,13 +71,21 @@
   }
 
   function handleExportSvg() {
-    if (!svgElement) return;
-    downloadSvg(svgElement, 'diagram.svg');
+    try {
+      if (!svgElement || parseError) return;
+      downloadSvg(svgElement, 'diagram.svg');
+    } catch (err) {
+      console.warn('Export SVG failed:', err);
+    }
   }
 
   function handleExportPng() {
-    if (!svgElement) return;
-    downloadPng(svgElement, 'diagram.png', 2, isDark ? '#121215' : '#ffffff');
+    try {
+      if (!svgElement || parseError) return;
+      downloadPng(svgElement, 'diagram.png', 2, isDark ? '#121215' : '#ffffff');
+    } catch (err) {
+      console.warn('Export PNG failed:', err);
+    }
   }
 
   function handleCopyCode() {
@@ -130,7 +138,7 @@
       <!-- Export SVG -->
       <button
         onclick={handleExportSvg}
-        disabled={!svgElement}
+        disabled={!svgElement || !!parseError}
         class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
         <FileCode size={13} />
@@ -140,7 +148,7 @@
       <!-- Export PNG -->
       <button
         onclick={handleExportPng}
-        disabled={!svgElement}
+        disabled={!svgElement || !!parseError}
         class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
         <ImageIcon size={13} />

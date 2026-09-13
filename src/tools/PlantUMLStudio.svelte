@@ -66,11 +66,15 @@
   let isLoading = $state(false);
   let errorMessage = $state<string | null>(null);
   let hasSyntaxWarning = $state(false);
+  let syntaxWarningDetail = $state<string | null>(null);
   let svgContainerRef: HTMLDivElement | null = null;
   let svgElement = $state<SVGSVGElement | null>(null);
   let panZoomCtrl = $state<PanZoomController | null>(null);
   let copied = $state(false);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let activeAbortController: AbortController | null = null;
+  let renderRequestSeq = 0;
 
   // Preset selector
   const presets = [
@@ -93,30 +97,56 @@
       svgElement = null;
       errorMessage = null;
       hasSyntaxWarning = false;
+      syntaxWarningDetail = null;
       return;
     }
+
+    if (activeAbortController) {
+      activeAbortController.abort();
+    }
+    activeAbortController = new AbortController();
+    const currentSeq = ++renderRequestSeq;
+    const signal = activeAbortController.signal;
 
     isLoading = true;
     errorMessage = null;
 
     try {
-      const encoded = plantumlEncoder.encode(code);
+      let encoded = '';
+      try {
+        encoded = plantumlEncoder.encode(code);
+      } catch (encodeErr) {
+        throw new Error('Diagram encoding failed. Check for unsupported characters.');
+      }
+
       const base = serverUrl.trim().endsWith('/') ? serverUrl.trim() : `${serverUrl.trim()}/`;
       const targetUrl = `${base}${encoded}`;
 
-      const response = await fetch(targetUrl);
+      const response = await fetch(targetUrl, { signal });
       if (!response.ok) {
         throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
       }
 
       const svgText = await response.text();
 
+      // Discard response if a newer request was dispatched
+      if (currentSeq !== renderRequestSeq) return;
+
       if (!svgText.includes('<svg')) {
         throw new Error('Server returned invalid non-SVG payload.');
       }
 
       // Check if PlantUML embedded a syntax error in the SVG
-      hasSyntaxWarning = svgText.toLowerCase().includes('syntax error');
+      const lower = svgText.toLowerCase();
+      const isError = lower.includes('syntax error') || lower.includes('[plantuml-src]');
+      hasSyntaxWarning = isError;
+
+      if (isError) {
+        const lineMatch = svgText.match(/line\s+(\d+)/i);
+        syntaxWarningDetail = lineMatch ? `Error around line ${lineMatch[1]}` : 'Syntax issue detected';
+      } else {
+        syntaxWarningDetail = null;
+      }
 
       if (svgContainerRef) {
         svgContainerRef.innerHTML = svgText;
@@ -128,12 +158,17 @@
           svg.style.display = 'block';
         }
       }
-    } catch (err) {
-      console.error('PlantUML render error:', err);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      if (currentSeq !== renderRequestSeq) return;
+
+      console.warn('PlantUML render error:', err);
       errorMessage =
         err instanceof Error ? err.message : 'Failed to connect to PlantUML server.';
     } finally {
-      isLoading = false;
+      if (currentSeq === renderRequestSeq) {
+        isLoading = false;
+      }
     }
   }
 
@@ -153,19 +188,31 @@
   });
 
   function handleExportSvg() {
-    if (!svgElement) return;
-    downloadSvg(svgElement, 'plantuml-diagram.svg');
+    try {
+      if (!svgElement || hasSyntaxWarning) return;
+      downloadSvg(svgElement, 'plantuml-diagram.svg');
+    } catch (err) {
+      console.warn('PlantUML export SVG failed:', err);
+    }
   }
 
   function handleExportPng() {
-    if (!svgElement) return;
-    downloadPng(svgElement, 'plantuml-diagram.png', 2, isDark ? '#121215' : '#ffffff');
+    try {
+      if (!svgElement || hasSyntaxWarning) return;
+      downloadPng(svgElement, 'plantuml-diagram.png', 2, isDark ? '#121215' : '#ffffff');
+    } catch (err) {
+      console.warn('PlantUML export PNG failed:', err);
+    }
   }
 
   function handleCopyCode() {
-    navigator.clipboard.writeText(plantumlCode);
-    copied = true;
-    setTimeout(() => (copied = false), 1500);
+    try {
+      navigator.clipboard.writeText(plantumlCode);
+      copied = true;
+      setTimeout(() => (copied = false), 1500);
+    } catch {
+      // Fallback
+    }
   }
 
   function resetServer() {
@@ -236,7 +283,7 @@
       <!-- Export SVG -->
       <button
         onclick={handleExportSvg}
-        disabled={!svgElement || isLoading}
+        disabled={!svgElement || isLoading || hasSyntaxWarning}
         class="flex items-center gap-1 px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
         <FileCode size={13} />
@@ -246,7 +293,7 @@
       <!-- Export PNG -->
       <button
         onclick={handleExportPng}
-        disabled={!svgElement || isLoading}
+        disabled={!svgElement || isLoading || hasSyntaxWarning}
         class="flex items-center gap-1 px-2.5 py-1 rounded bg-primary text-white hover:bg-primary/90 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
         <ImageIcon size={13} />
@@ -354,19 +401,25 @@
 
       <!-- Live Error / Warning Banners -->
       {#if errorMessage}
-        <div class="absolute top-8 inset-x-0 z-30 bg-red-500/10 border-b border-red-500/30 px-4 py-2 text-xs font-mono text-red-600 dark:text-red-400 flex items-start gap-2 backdrop-blur-xs">
-          <AlertTriangle size={15} class="shrink-0 mt-0.5" />
-          <div class="overflow-hidden">
-            <span class="font-semibold mr-1">Connection / Render Error:</span>
-            <span class="block">{errorMessage}</span>
+        <div class="absolute top-8 inset-x-0 z-30 bg-red-500/10 border-b border-red-500/30 px-4 py-2 text-xs font-mono text-red-600 dark:text-red-400 flex items-center justify-between gap-2 backdrop-blur-xs">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <AlertTriangle size={15} class="shrink-0" />
+            <span class="font-semibold shrink-0">Render Error:</span>
+            <span class="truncate">{errorMessage}</span>
           </div>
+          <button
+            onclick={() => renderDiagram(plantumlCode)}
+            class="px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-500/20 text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
       {:else if hasSyntaxWarning}
         <div class="absolute top-8 inset-x-0 z-30 bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono text-amber-600 dark:text-amber-400 flex items-start gap-2 backdrop-blur-xs">
           <AlertTriangle size={15} class="shrink-0 mt-0.5" />
           <div class="overflow-hidden">
-            <span class="font-semibold mr-1">Syntax Error:</span>
-            <span>PlantUML reported a syntax issue in the diagram definition. Check the red markers below.</span>
+            <span class="font-semibold mr-1">Syntax Issue:</span>
+            <span>{syntaxWarningDetail ? `${syntaxWarningDetail}. Review the red markers in the preview diagram.` : 'PlantUML reported a syntax issue in the diagram. Review the red markers in the preview.'}</span>
           </div>
         </div>
       {/if}

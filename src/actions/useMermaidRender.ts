@@ -104,11 +104,28 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
 
     mermaid.initialize({
       startOnLoad: false,
+      suppressErrorRendering: true,
       theme: mode === 'dark' ? 'dark' : 'neutral',
       securityLevel: 'loose',
       fontFamily: '"JetBrains Mono", Inter, monospace',
       themeVariables: themeVars,
     });
+  }
+
+  function cleanupStrayMermaidNodes(renderId: string) {
+    try {
+      const strayError = document.getElementById('d' + renderId);
+      if (strayError) strayError.remove();
+      const strayRender = document.getElementById(renderId);
+      if (strayRender && strayRender !== node) strayRender.remove();
+
+      // Clean up any other stray elements appended to document body by Mermaid error handlers
+      document.querySelectorAll('body > [id^="dmermaid"], body > [id^="mermaid-svg-"], body > .mermaid-error').forEach((el) => {
+        el.remove();
+      });
+    } catch {
+      // Ignore DOM cleanup errors
+    }
   }
 
   async function renderDiagram(opts: MermaidRenderOptions) {
@@ -118,13 +135,17 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
       return;
     }
 
-    initMermaid(opts.scheme, opts.theme);
+    try {
+      initMermaid(opts.scheme, opts.theme);
+    } catch (err) {
+      console.warn('Failed to re-initialize Mermaid:', err);
+    }
 
     const renderId = `mermaid-svg-${Date.now()}-${++renderIdCounter}`;
 
     try {
-      // Test syntax parse first
-      await mermaid.parse(opts.code);
+      // Test syntax parse first with error suppression
+      await mermaid.parse(opts.code, { suppressErrors: true });
 
       // Render the diagram
       const { svg } = await mermaid.render(renderId, opts.code);
@@ -139,16 +160,15 @@ export const useMermaidRender: Action<HTMLElement, MermaidRenderOptions> = (node
         opts.onSuccess?.(svgElement);
       }
 
+      cleanupStrayMermaidNodes(renderId);
       opts.onError?.(null);
     } catch (err: any) {
-      // Clean up any stray error elements inserted into the DOM by Mermaid
-      const strayError = document.getElementById('d' + renderId);
-      if (strayError) strayError.remove();
-      const strayRender = document.getElementById(renderId);
-      if (strayRender && strayRender !== node) strayRender.remove();
+      cleanupStrayMermaidNodes(renderId);
 
-      const message = err?.message || String(err);
-      opts.onError?.(new Error(message));
+      const rawMsg = err?.message || String(err);
+      // Clean up cryptic internal parser stack traces to show concise message
+      const firstLine = rawMsg.split('\n')[0].replace(/^Error:\s*/, '');
+      opts.onError?.(new Error(firstLine || 'Invalid Mermaid syntax.'));
     }
   }
 

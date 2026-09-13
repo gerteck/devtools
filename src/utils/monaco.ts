@@ -14,10 +14,11 @@ self.MonacoEnvironment = {
 };
 
 // Register custom Mermaid syntax language in Monaco
-if (!monaco.languages.getLanguages().some((l) => l.id === 'mermaid')) {
-  monaco.languages.register({ id: 'mermaid' });
+try {
+  if (!monaco.languages.getLanguages().some((l) => l.id === 'mermaid')) {
+    monaco.languages.register({ id: 'mermaid' });
 
-  monaco.languages.setMonarchTokensProvider('mermaid', {
+    monaco.languages.setMonarchTokensProvider('mermaid', {
     defaultToken: '',
     tokenPostfix: '.mermaid',
 
@@ -125,13 +126,17 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'mermaid')) {
       whitespace: [[/[ \t\r\n]+/, 'white']],
     },
   });
+  }
+} catch (e) {
+  console.warn('Failed to register Mermaid Monaco language:', e);
 }
 
 // Register custom PlantUML syntax language in Monaco
-if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
-  monaco.languages.register({ id: 'plantuml' });
+try {
+  if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
+    monaco.languages.register({ id: 'plantuml' });
 
-  monaco.languages.setMonarchTokensProvider('plantuml', {
+    monaco.languages.setMonarchTokensProvider('plantuml', {
     defaultToken: '',
     tokenPostfix: '.plantuml',
 
@@ -221,6 +226,9 @@ if (!monaco.languages.getLanguages().some((l) => l.id === 'plantuml')) {
       whitespace: [[/[ \t\r\n]+/, 'white']],
     },
   });
+  }
+} catch (e) {
+  console.warn('Failed to register PlantUML Monaco language:', e);
 }
 
 // --- THEMES ---
