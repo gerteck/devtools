@@ -1,6 +1,6 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
-  import { Search, ArrowRight, Braces, GitCompare, Workflow, Network } from '@lucide/svelte';
+  import { Search, ArrowRight, Braces, GitCompare, Workflow, Network, Database } from '@lucide/svelte';
 
   let searchQuery = $state('');
   let searchInputRef: HTMLInputElement | null = null;
@@ -29,6 +29,7 @@
     if (id === 'diff') return GitCompare;
     if (id === 'mermaid') return Workflow;
     if (id === 'plantuml') return Network;
+    if (id === 'sqlite') return Database;
     return Workflow;
   }
 </script>

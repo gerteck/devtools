@@ -43,6 +43,17 @@ export const TOOLS: ToolItem[] = $state([
     shortcutLabel: '⌘4',
     icon: 'network',
   },
+  {
+    id: 'sqlite',
+    name: 'SQLite Viewer',
+    version: 'v3.53.4',
+    description: 'Inspect, query, and export SQLite databases client-side with full .wal write-ahead log support.',
+    tag: 'Database / SQL',
+    route: '/sqlite',
+    shortcutKey: '5',
+    shortcutLabel: '⌘5',
+    icon: 'database',
+  },
 ]);
 
 class Router {
@@ -59,7 +70,7 @@ class Router {
   private getRouteFromHash(): Route {
     if (typeof window === 'undefined') return '/';
     const hash = window.location.hash.replace(/^#/, '');
-    if (hash === '/json' || hash === '/diff' || hash === '/mermaid' || hash === '/plantuml') {
+    if (hash === '/json' || hash === '/diff' || hash === '/mermaid' || hash === '/plantuml' || hash === '/sqlite') {
       return hash;
     }
     return '/';

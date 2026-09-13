@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@lucide/svelte": "^1.45.0",
+    "@sqlite.org/sqlite-wasm": "^3.53.4-build1",
+    "@types/sql.js": "^1.4.11",
     "mermaid": "^11.4.1",
     "monaco-editor": "^0.52.2",
     "plantuml-encoder": "^1.4.0",
+    "sql.js": "^1.14.2",
     "svelte": "^5.20.2"
   },
   "devDependencies": {
