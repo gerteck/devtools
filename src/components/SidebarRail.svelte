@@ -1,6 +1,7 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
   import type { Route } from '../types';
+  import { prefetchTool } from '../utils/toolLoader';
   import { Braces, GitCompare, Workflow, LayoutGrid, Network, Database } from '@lucide/svelte';
 
   let { currentRoute }: { currentRoute: Route } = $props();
@@ -20,6 +21,7 @@
     {@const isActive = currentRoute === item.route}
     <button
       onclick={() => router.navigate(item.route)}
+      onmouseenter={() => prefetchTool(item.route)}
       class="group relative w-10 h-10 rounded-lg flex items-center justify-center transition-all {isActive
         ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
         : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}"

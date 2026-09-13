@@ -433,8 +433,5 @@ const defaultDarkDef: monaco.editor.IStandaloneThemeData = {
     },
   });
 
-export function getMonacoThemeName(scheme: ColorScheme, mode: ThemeMode): string {
-  return `theme-${scheme}-${mode}`;
-}
-
+export { getMonacoThemeName } from '../types';
 export { monaco };

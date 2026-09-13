@@ -1,5 +1,6 @@
 <script lang="ts">
   import { router, TOOLS } from '../router.svelte';
+  import { prefetchTool } from '../utils/toolLoader';
   import {
     Search,
     ArrowRight,
@@ -49,8 +50,8 @@
 <div class="w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-6 py-10 md:py-14 flex-1 flex flex-col justify-center">
   <!-- Hero Section -->
   <div class="text-left max-w-2xl mb-8 w-full">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
-      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface font-mono">devtools</h1>
+    <!-- Star on GitHub Callout (Above Header) -->
+    <div class="mb-3.5">
       <a
         href="https://github.com/gerteck/devtools"
         target="_blank"
@@ -63,6 +64,8 @@
         <ExternalLink size={12} class="opacity-50 group-hover:opacity-100 transition-opacity" />
       </a>
     </div>
+
+    <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-on-surface font-mono mb-2">devtools</h1>
     <p class="text-sm text-on-surface-variant font-normal leading-relaxed">
       A small collection of lightweight everyday tools for web development.
     </p>
@@ -96,6 +99,9 @@
     {#each filteredTools as tool}
       {@const IconComponent = getToolIcon(tool.id)}
       <div
+        onmouseenter={() => prefetchTool(tool.route)}
+        role="region"
+        aria-label={tool.name}
         class="tool-card group bg-surface border border-outline-variant hover:border-outline rounded-lg p-5 transition-colors flex flex-col justify-between"
       >
         <div>

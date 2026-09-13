@@ -4,13 +4,9 @@
   import SidebarRail from './components/SidebarRail.svelte';
   import Footer from './components/Footer.svelte';
   import Home from './tools/Home.svelte';
-  import JsonSuite from './tools/JsonSuite.svelte';
-  import DiffChecker from './tools/DiffChecker.svelte';
-  import MermaidStudio from './tools/MermaidStudio.svelte';
-  import PlantUMLStudio from './tools/PlantUMLStudio.svelte';
-import SqliteViewer from './tools/SqliteViewer.svelte';
-  import type { ColorScheme, ThemeMode } from './types';
-  import { getMonacoThemeName } from './utils/monaco';
+  import LazyTool from './components/LazyTool.svelte';
+  import { TOOL_LOADERS } from './utils/toolLoader';
+  import { type ColorScheme, type ThemeMode, getMonacoThemeName } from './types';
 
   // Initialize theme mode and color scheme from localStorage
   let mode = $state<ThemeMode>(
@@ -89,15 +85,35 @@ import SqliteViewer from './tools/SqliteViewer.svelte';
       {#if router.currentRoute === '/'}
         <Home />
       {:else if router.currentRoute === '/json'}
-        <JsonSuite theme={monacoTheme} />
+        <LazyTool
+          name="JSON Formatter"
+          loader={TOOL_LOADERS['/json']}
+          props={{ theme: monacoTheme }}
+        />
       {:else if router.currentRoute === '/diff'}
-        <DiffChecker theme={monacoTheme} />
+        <LazyTool
+          name="Diff Checker"
+          loader={TOOL_LOADERS['/diff']}
+          props={{ theme: monacoTheme }}
+        />
       {:else if router.currentRoute === '/mermaid'}
-        <MermaidStudio {scheme} theme={mode} {monacoTheme} />
+        <LazyTool
+          name="Mermaid Studio"
+          loader={TOOL_LOADERS['/mermaid']}
+          props={{ scheme, theme: mode, monacoTheme }}
+        />
       {:else if router.currentRoute === '/plantuml'}
-        <PlantUMLStudio {scheme} theme={mode} {monacoTheme} />
+        <LazyTool
+          name="PlantUML Studio"
+          loader={TOOL_LOADERS['/plantuml']}
+          props={{ scheme, theme: mode, monacoTheme }}
+        />
       {:else if router.currentRoute === '/sqlite'}
-        <SqliteViewer {scheme} theme={mode} {monacoTheme} />
+        <LazyTool
+          name="SQLite Studio"
+          loader={TOOL_LOADERS['/sqlite']}
+          props={{ scheme, theme: mode, monacoTheme }}
+        />
       {/if}
     </main>
   </div>

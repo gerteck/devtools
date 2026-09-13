@@ -20,3 +20,7 @@ export interface JsonError {
   line?: number;
   column?: number;
 }
+
+export function getMonacoThemeName(scheme: ColorScheme, mode: ThemeMode): string {
+  return `theme-${scheme}-${mode}`;
+}
