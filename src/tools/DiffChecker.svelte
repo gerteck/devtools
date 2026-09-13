@@ -74,15 +74,25 @@
   }
 
   const languages = [
-    { value: 'json', label: 'JSON' },
     { value: 'plaintext', label: 'Plain Text' },
+    { value: 'json', label: 'JSON' },
+    { value: 'java', label: 'Java' },
+    { value: 'kotlin', label: 'Kotlin' },
+    { value: 'swift', label: 'Swift' },
+    { value: 'objective-c', label: 'Objective-C' },
     { value: 'typescript', label: 'TypeScript' },
     { value: 'javascript', label: 'JavaScript' },
+    { value: 'python', label: 'Python' },
+    { value: 'cpp', label: 'C++' },
+    { value: 'csharp', label: 'C#' },
+    { value: 'go', label: 'Go' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'sql', label: 'SQL' },
     { value: 'html', label: 'HTML' },
     { value: 'css', label: 'CSS' },
     { value: 'yaml', label: 'YAML' },
-    { value: 'markdown', label: 'Markdown' },
     { value: 'xml', label: 'XML' },
+    { value: 'markdown', label: 'Markdown' },
   ];
 
   function loadSample() {
