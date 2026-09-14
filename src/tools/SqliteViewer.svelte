@@ -21,6 +21,8 @@
   import {
     Database,
     Upload,
+    FolderOpen,
+    SlidersHorizontal,
     Sparkles,
     Play,
     Table,
@@ -145,6 +147,51 @@
   let gridSearchQuery = $state('');
   let gridDurationMs = $state(0);
 
+  // Column search & filter state
+  let gridSearchCol = $state('');
+  let hiddenColumns = $state<string[]>([]);
+  let showColumnFilterPopover = $state(false);
+  let columnSearchQuery = $state('');
+  let schemaColumnSearch = $state('');
+
+  function toggleColumnVisibility(col: string) {
+    if (hiddenColumns.includes(col)) {
+      hiddenColumns = hiddenColumns.filter((c) => c !== col);
+    } else {
+      if (gridColumns.length - hiddenColumns.length > 1) {
+        hiddenColumns = [...hiddenColumns, col];
+      }
+    }
+  }
+
+  function showAllColumns() {
+    hiddenColumns = [];
+  }
+
+  function hideAllColumns() {
+    if (gridColumns.length > 0) {
+      hiddenColumns = gridColumns.slice(1);
+    }
+  }
+
+  const visibleColumns = $derived(
+    gridColumns.filter((c) => !hiddenColumns.includes(c))
+  );
+
+  const visibleColumnIndices = $derived(
+    gridColumns
+      .map((col, idx) => ({ col, idx }))
+      .filter(({ col }) => !hiddenColumns.includes(col))
+      .map(({ idx }) => idx)
+  );
+
+  const filteredColumnsForPicker = $derived(
+    gridColumns.filter((c) =>
+      c.toLowerCase().includes(columnSearchQuery.toLowerCase().trim())
+    )
+  );
+
+
   // Query console state
   let sqlQuery = $state('SELECT * FROM products LIMIT 50;');
   let queryColumns = $state<string[]>([]);
@@ -157,10 +204,23 @@
   let cellModalContent = $state<{ col: string; val: any } | null>(null);
   let copied = $state(false);
 
-  // Drag-and-drop highlight
+  // Drag-and-drop highlight & file inputs
   let isDraggingOver = $state(false);
   let fileInputRef = $state<HTMLInputElement | null>(null);
+  let folderInputRef = $state<HTMLInputElement | null>(null);
   let showUploadGuide = $state(false);
+
+  // Mount notification toast state
+  let loadNotice = $state<{ title: string; subtitle?: string; isWal?: boolean } | null>(null);
+  let loadNoticeTimeout: any = null;
+
+  function showLoadNotice(title: string, subtitle?: string, isWal = false) {
+    if (loadNoticeTimeout) clearTimeout(loadNoticeTimeout);
+    loadNotice = { title, subtitle, isWal };
+    loadNoticeTimeout = setTimeout(() => {
+      loadNotice = null;
+    }, 4500);
+  }
 
   // Initialize SQLite WASM on mount
   onMount(async () => {
@@ -184,6 +244,10 @@
     if (!engine) return;
     metadata = engine.metadata;
     tables = engine.tables;
+    hiddenColumns = [];
+    gridSearchCol = '';
+    columnSearchQuery = '';
+    schemaColumnSearch = '';
 
     const firstTable = tables.find((t) => t.type === 'table') || tables[0];
     if (firstTable) {
@@ -203,7 +267,8 @@
       gridPageSize,
       gridSortCol,
       gridSortOrder,
-      gridSearchQuery
+      gridSearchQuery,
+      gridSearchCol || undefined
     );
 
     gridColumns = res.columns;
@@ -217,6 +282,10 @@
     gridSortCol = undefined;
     gridSortOrder = 'ASC';
     gridSearchQuery = '';
+    gridSearchCol = '';
+    hiddenColumns = [];
+    columnSearchQuery = '';
+    schemaColumnSearch = '';
     loadTableData(name, true);
     sqlQuery = `SELECT * FROM "${name}" LIMIT 50;`;
   }
@@ -278,8 +347,16 @@
     input.value = '';
   }
 
+  async function handleFolderInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    await processUploadedFiles(Array.from(input.files));
+    input.value = '';
+  }
+
   async function processUploadedFiles(fileList: File[]) {
     if (!engine) return;
+    if (fileList.length === 0) return;
     isLoading = true;
     loadingMsg = 'Reading database & mounting WAL files...';
 
@@ -288,13 +365,27 @@
         const buffer = await file.arrayBuffer();
         return {
           name: file.name,
+          path: (file as any).webkitRelativePath || file.name,
           data: new Uint8Array(buffer),
         };
       });
 
       const loadedFiles = await Promise.all(readPromises);
-      await engine.loadDatabaseFiles(loadedFiles);
+      const res = await engine.loadDatabaseFiles(loadedFiles);
       syncEngineState();
+
+      if (res.walFile) {
+        showLoadNotice(
+          `Loaded ${res.primaryFile}`,
+          `Mounted companion ${res.walFile}${res.shmFile ? ` & ${res.shmFile}` : ''} (WAL Mode Active)`,
+          true
+        );
+      } else {
+        showLoadNotice(
+          `Loaded ${res.primaryFile}`,
+          `${formatBytes(loadedFiles.find((f) => f.name.includes(res.primaryFile))?.data.byteLength || 0)}`
+        );
+      }
     } catch (err: any) {
       alert(`Failed to load database: ${err.message}`);
     } finally {
@@ -302,11 +393,76 @@
     }
   }
 
-  function handleDrop(e: DragEvent) {
+  async function extractFilesFromDataTransfer(dataTransfer: DataTransfer): Promise<File[]> {
+    const files: File[] = [];
+    const items = dataTransfer.items;
+
+    if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === 'function') {
+      const queue: any[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry();
+        if (entry) queue.push(entry);
+      }
+
+      const readDirectoryEntries = async (dirReader: any): Promise<any[]> => {
+        const entries: any[] = [];
+        const readBatch = async (): Promise<any[]> => {
+          return new Promise<any[]>((resolve, reject) => {
+            dirReader.readEntries(resolve, reject);
+          });
+        };
+        let batch = await readBatch();
+        while (batch.length > 0) {
+          entries.push(...batch);
+          batch = await readBatch();
+        }
+        return entries;
+      };
+
+      while (queue.length > 0) {
+        const entry = queue.shift();
+        if (entry.isFile) {
+          try {
+            const file = await new Promise<File>((resolve, reject) => {
+              entry.file(resolve, reject);
+            });
+            files.push(file);
+          } catch (err) {
+            console.warn('Could not read dropped file entry:', err);
+          }
+        } else if (entry.isDirectory) {
+          try {
+            const dirReader = entry.createReader();
+            const children = await readDirectoryEntries(dirReader);
+            queue.push(...children);
+          } catch (err) {
+            console.warn('Could not read dropped directory entry:', err);
+          }
+        }
+      }
+    }
+
+    if (files.length === 0 && dataTransfer.files && dataTransfer.files.length > 0) {
+      return Array.from(dataTransfer.files);
+    }
+
+    return files;
+  }
+
+  async function handleDrop(e: DragEvent) {
     e.preventDefault();
     isDraggingOver = false;
-    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-      processUploadedFiles(Array.from(e.dataTransfer.files));
+    if (!e.dataTransfer) return;
+    try {
+      const files = await extractFilesFromDataTransfer(e.dataTransfer);
+      if (files.length > 0) {
+        await processUploadedFiles(files);
+      }
+    } catch (err: any) {
+      console.error('Error extracting dropped files:', err);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        await processUploadedFiles(Array.from(e.dataTransfer.files));
+      }
     }
   }
 
@@ -324,20 +480,23 @@
   }
 
   function exportTableCsv() {
-    if (!gridColumns.length || !gridRows.length) return;
-    const csv = SqliteEngine.toCsv(gridColumns, gridRows);
+    if (!visibleColumns.length || !gridRows.length) return;
+    const rows = gridRows.map((r) => visibleColumnIndices.map((i) => r[i]));
+    const csv = SqliteEngine.toCsv(visibleColumns, rows);
     downloadFile(csv, `${selectedTableName}_page_${gridPage + 1}.csv`, 'text/csv');
   }
 
   function exportTableJson() {
-    if (!gridColumns.length || !gridRows.length) return;
-    const json = SqliteEngine.toJson(gridColumns, gridRows);
+    if (!visibleColumns.length || !gridRows.length) return;
+    const rows = gridRows.map((r) => visibleColumnIndices.map((i) => r[i]));
+    const json = SqliteEngine.toJson(visibleColumns, rows);
     downloadFile(json, `${selectedTableName}_page_${gridPage + 1}.json`, 'application/json');
   }
 
   function exportTableSql() {
-    if (!gridColumns.length || !gridRows.length) return;
-    const sql = SqliteEngine.toSqlInserts(selectedTableName, gridColumns, gridRows);
+    if (!visibleColumns.length || !gridRows.length) return;
+    const rows = gridRows.map((r) => visibleColumnIndices.map((i) => r[i]));
+    const sql = SqliteEngine.toSqlInserts(selectedTableName, visibleColumns, rows);
     downloadFile(sql, `${selectedTableName}_inserts.sql`, 'text/plain');
   }
 
@@ -377,6 +536,13 @@
   }
 
   const selectedTable = $derived(tables.find((t) => t.name === selectedTableName));
+  const filteredSchemaColumns = $derived(
+    (selectedTable?.columns || []).filter(
+      (c) =>
+        c.name.toLowerCase().includes(schemaColumnSearch.toLowerCase().trim()) ||
+        c.type.toLowerCase().includes(schemaColumnSearch.toLowerCase().trim())
+    )
+  );
   const filteredTables = $derived(
     tables.filter((t) =>
       t.name.toLowerCase().includes(tableSearchQuery.toLowerCase().trim())
@@ -394,8 +560,12 @@
     }
   }}
   onclick={(e) => {
-    if (showUploadGuide && !(e.target as HTMLElement)?.closest('.upload-guide-container')) {
+    const target = e.target as HTMLElement;
+    if (showUploadGuide && !target?.closest('.upload-guide-container')) {
       showUploadGuide = false;
+    }
+    if (showColumnFilterPopover && !target?.closest('.column-picker-container')) {
+      showColumnFilterPopover = false;
     }
   }}
 />
@@ -411,13 +581,23 @@
   role="region"
   aria-label="SQLite Viewer"
 >
-  <!-- Hidden File Input -->
+  <!-- Hidden File Input (accept includes WAL/SHM variants & wildcard so OS picker doesn't grey them out) -->
   <input
     bind:this={fileInputRef}
     type="file"
-    accept=".db,.sqlite,.sqlite3,.wal,.shm,*/*"
+    accept=".db,.sqlite,.sqlite3,.db-wal,.sqlite-wal,.sqlite3-wal,.db-shm,.sqlite-shm,.sqlite3-shm,.wal,.shm,*"
     multiple
     onchange={handleFileInput}
+    class="hidden"
+  />
+
+  <!-- Hidden Folder / Directory Input -->
+  <input
+    bind:this={folderInputRef}
+    type="file"
+    webkitdirectory={true}
+    multiple
+    onchange={handleFolderInput}
     class="hidden"
   />
 
@@ -442,6 +622,13 @@
             <span class="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
               WAL Active
             </span>
+          {:else if metadata.journalMode === 'wal'}
+            <span
+              class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium cursor-help"
+              title="This database uses WAL mode. Uncheckpointed writes from your .db-wal file are not loaded. Upload the .wal file or use 'Open Folder' to view latest transactions."
+            >
+              WAL Missing (Snapshot Only)
+            </span>
           {/if}
           <span>•</span>
           <span class="text-on-surface-variant font-medium">{tables.length} tables</span>
@@ -449,31 +636,40 @@
       {/if}
     </div>
 
-    <!-- Right Controls: Open DB, Sample DB, Export -->
-    <div class="flex items-center gap-2">
-      <!-- Open Files with Hover & Click Guide Trigger -->
+    <!-- Right Controls: Open Files, Open Folder, Guide, Sample DB, Export -->
+    <div class="flex items-center gap-1.5">
+      <!-- Open Files -->
+      <button
+        onclick={() => fileInputRef?.click()}
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs"
+        title="Select one or multiple database files (.db, .sqlite, .wal, .shm)"
+      >
+        <Upload size={13} />
+        <span class="hidden sm:inline">Open Files</span>
+        <span class="sm:hidden">Files</span>
+      </button>
+
+      <!-- Open Folder (Auto-detects DB + WAL + SHM companion files) -->
+      <button
+        onclick={() => folderInputRef?.click()}
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs"
+        title="Open entire directory containing .db and companion .wal / .shm files"
+      >
+        <FolderOpen size={13} class="text-primary dark:text-indigo-400" />
+        <span class="hidden sm:inline">Open Folder</span>
+        <span class="sm:hidden">Folder</span>
+      </button>
+
+      <!-- Guide Popover Trigger -->
       <div class="relative group upload-guide-container">
-        <div class="flex items-center rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high transition-colors overflow-hidden">
-          <button
-            onclick={() => fileInputRef?.click()}
-            class="flex items-center gap-1.5 px-2.5 py-1 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer text-xs"
-            title="Open .db, .sqlite, .wal files"
-          >
-            <Upload size={13} />
-            <span>Open Files</span>
-          </button>
-
-          <div class="w-px h-3.5 bg-outline-variant"></div>
-
-          <button
-            onclick={() => (showUploadGuide = !showUploadGuide)}
-            class="px-1.5 py-1 text-outline hover:text-primary transition-colors cursor-pointer"
-            title="What files can I upload? (Click for guide)"
-            aria-label="Upload file types info"
-          >
-            <HelpCircle size={12} />
-          </button>
-        </div>
+        <button
+          onclick={() => (showUploadGuide = !showUploadGuide)}
+          class="p-1 rounded border border-outline-variant bg-surface-container hover:bg-surface-container-high text-outline hover:text-primary transition-colors cursor-pointer"
+          title="Upload guide & multi-file instructions"
+          aria-label="Upload file types info"
+        >
+          <HelpCircle size={13} />
+        </button>
 
         <!-- Floating Hover / Click Guide Popover -->
         <div
@@ -484,7 +680,7 @@
           <div class="flex items-center justify-between border-b border-outline-variant pb-2 mb-2.5">
             <span class="font-bold flex items-center gap-1.5 text-on-surface">
               <Database size={13} class="text-primary dark:text-indigo-400" />
-              Supported Files & Formats
+              Loading Databases & WAL Files
             </span>
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary dark:text-indigo-400 font-sans font-medium">
               100% Client-Side
@@ -522,13 +718,15 @@
           </div>
 
           <!-- Pro Tip Box -->
-          <div class="mt-3 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 flex items-start gap-2 text-[10.5px] leading-relaxed text-on-surface-variant">
-            <span class="text-amber-500 text-xs mt-0.5 shrink-0">💡</span>
-            <div>
-              <strong class="text-on-surface">Pro-Tip for WAL Databases:</strong>
-              <div class="mt-0.5">
-                Select or drop your <code>.db</code> and companion <code>.wal</code> files <strong>together in a single batch</strong>. They will automatically be replayed into memory to display the latest uncommitted rows!
-              </div>
+          <div class="mt-3 p-2.5 rounded-lg bg-surface-container border border-outline-variant/60 text-[10.5px] leading-relaxed text-on-surface-variant">
+            <div class="flex items-center gap-1.5 font-bold text-on-surface">
+              <span class="text-amber-500 text-xs">💡</span>
+              <span>How to load WAL databases:</span>
+            </div>
+            <div class="mt-1.5 space-y-1 pl-1">
+              <div>• <strong>Open Folder:</strong> Select the directory containing your <code>.db</code> and <code>-wal</code> files to load them all at once.</div>
+              <div>• <strong>Open Files:</strong> Select both files simultaneously using Cmd / Ctrl + click.</div>
+              <div>• <strong>Drag & Drop:</strong> Drag your database folder directly onto DevTools!</div>
             </div>
           </div>
         </div>
@@ -564,6 +762,24 @@
     <div class="absolute inset-0 z-50 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3">
       <div class="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       <p class="font-mono text-xs text-on-surface-variant">{loadingMsg}</p>
+    </div>
+  {/if}
+
+  <!-- Mount Notification Toast -->
+  {#if loadNotice}
+    <div class="absolute top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300">
+      <div class="px-3.5 py-1.5 rounded-lg bg-surface border {loadNotice.isWal ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : 'border-outline-variant text-on-surface bg-surface-container'} shadow-xl flex items-center gap-2 font-mono text-xs pointer-events-auto">
+        <Check size={14} class={loadNotice.isWal ? 'text-emerald-500 shrink-0' : 'text-primary shrink-0'} />
+        <div class="flex items-center gap-1.5 truncate max-w-md">
+          <span class="font-bold">{loadNotice.title}</span>
+          {#if loadNotice.subtitle}
+            <span class="text-[11px] opacity-80 truncate">• {loadNotice.subtitle}</span>
+          {/if}
+        </div>
+        <button onclick={() => (loadNotice = null)} class="ml-1 text-outline hover:text-on-surface cursor-pointer">
+          <X size={12} />
+        </button>
+      </div>
     </div>
   {/if}
 
@@ -714,28 +930,141 @@
           {#if activeTab === 'data'}
             <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
               <!-- Filter & Export Subtoolbar -->
-              <div class="h-9 px-3 border-b border-outline-variant bg-surface flex items-center justify-between gap-3 text-xs font-mono shrink-0">
-                <!-- Row search filter -->
-                <div class="flex items-center gap-2 flex-1 max-w-sm">
-                  <Search size={12} class="text-outline shrink-0" />
-                  <input
-                    bind:value={gridSearchQuery}
-                    oninput={handleGridSearch}
-                    type="text"
-                    placeholder="Search records in {selectedTableName}..."
-                    class="w-full bg-transparent text-[11px] text-on-surface placeholder:text-outline focus:outline-none"
-                  />
-                  {#if gridSearchQuery}
+              <div class="h-10 px-3 border-b border-outline-variant bg-surface flex items-center justify-between gap-3 text-xs font-mono shrink-0">
+                <!-- Left: Search with Column Scope & Columns Selector -->
+                <div class="flex items-center gap-2.5 flex-1 max-w-xl">
+                  <!-- Search input with segmented column scope selector -->
+                  <div class="flex items-center rounded-md border border-outline-variant bg-surface-container overflow-hidden text-xs focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all flex-1 max-w-md h-7">
+                    <!-- Scope dropdown badge -->
+                    <div class="flex items-center gap-1 pl-2.5 pr-2 h-full bg-surface-container-high/80 border-r border-outline-variant text-[11px] text-on-surface-variant shrink-0">
+                      <span class="text-outline text-[10px] uppercase font-bold tracking-wider">In:</span>
+                      <select
+                        bind:value={gridSearchCol}
+                        onchange={handleGridSearch}
+                        class="bg-transparent text-[11px] text-on-surface font-mono focus:outline-none cursor-pointer pr-1 truncate max-w-[110px]"
+                        title="Target specific column or search all columns"
+                      >
+                        <option value="">All Columns</option>
+                        {#each gridColumns as col}
+                          <option value={col}>{col}</option>
+                        {/each}
+                      </select>
+                    </div>
+
+                    <!-- Search text input with icon & clear button -->
+                    <div class="flex items-center gap-2 px-2.5 h-full flex-1 min-w-0">
+                      <Search size={12} class="text-outline shrink-0" />
+                      <input
+                        bind:value={gridSearchQuery}
+                        oninput={handleGridSearch}
+                        type="text"
+                        placeholder={gridSearchCol ? `Search in ${gridSearchCol}...` : `Search records in ${selectedTableName}...`}
+                        class="w-full bg-transparent text-[11px] text-on-surface placeholder:text-outline focus:outline-none"
+                      />
+                      {#if gridSearchQuery}
+                        <button
+                          onclick={() => {
+                            gridSearchQuery = '';
+                            handleGridSearch();
+                          }}
+                          class="text-outline hover:text-on-surface cursor-pointer p-0.5"
+                          title="Clear search query"
+                        >
+                          <X size={12} />
+                        </button>
+                      {/if}
+                    </div>
+                  </div>
+
+                  <!-- Column Visibility & Column Search Popover Button -->
+                  <div class="relative column-picker-container">
                     <button
-                      onclick={() => {
-                        gridSearchQuery = '';
-                        handleGridSearch();
-                      }}
-                      class="text-outline hover:text-on-surface cursor-pointer"
+                      onclick={() => (showColumnFilterPopover = !showColumnFilterPopover)}
+                      class="h-7 flex items-center gap-1.5 px-2.5 rounded-md border border-outline-variant hover:bg-surface-container text-[11px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer {hiddenColumns.length > 0 ? 'bg-primary/10 text-primary border-primary/30 font-semibold' : 'bg-surface'}"
+                      title="Filter and toggle column visibility"
                     >
-                      <X size={12} />
+                      <SlidersHorizontal size={11} class={hiddenColumns.length > 0 ? 'text-primary' : 'text-outline'} />
+                      <span class="hidden sm:inline">Columns</span>
+                      <span class="px-1.5 py-0.2 rounded bg-surface-container-high text-[10px] text-on-surface font-semibold">
+                        {visibleColumns.length}/{gridColumns.length}
+                      </span>
                     </button>
-                  {/if}
+
+                    {#if showColumnFilterPopover}
+                      <div
+                        class="absolute left-0 top-full mt-1.5 w-64 bg-surface border border-outline-variant rounded-xl shadow-2xl z-40 p-2.5 flex flex-col gap-2 font-mono text-xs text-on-surface"
+                      >
+                        <!-- Column Search input inside popover -->
+                        <div class="relative flex items-center">
+                          <Search size={11} class="absolute left-2 text-outline pointer-events-none" />
+                          <input
+                            bind:value={columnSearchQuery}
+                            type="text"
+                            placeholder="Filter columns..."
+                            class="w-full bg-surface-container border border-outline-variant rounded pl-6 pr-5 py-1 text-[11px] text-on-surface placeholder:text-outline focus:outline-none focus:border-primary"
+                          />
+                          {#if columnSearchQuery}
+                            <button
+                              onclick={() => (columnSearchQuery = '')}
+                              class="absolute right-2 text-outline hover:text-on-surface cursor-pointer"
+                            >
+                              <X size={10} />
+                            </button>
+                          {/if}
+                        </div>
+
+                        <!-- Header: Action buttons -->
+                        <div class="flex items-center justify-between text-[10px] px-0.5 text-outline">
+                          <span>{filteredColumnsForPicker.length} of {gridColumns.length} columns</span>
+                          <div class="flex items-center gap-2">
+                            <button
+                              onclick={showAllColumns}
+                              class="text-primary hover:underline cursor-pointer"
+                            >
+                              Show All
+                            </button>
+                            <span>·</span>
+                            <button
+                              onclick={hideAllColumns}
+                              class="hover:underline cursor-pointer"
+                            >
+                              Hide All
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Column list with checkboxes -->
+                        <div class="max-h-56 overflow-y-auto space-y-0.5 border-t border-outline-variant/60 pt-1.5">
+                          {#each filteredColumnsForPicker as col}
+                            {@const isVisible = !hiddenColumns.includes(col)}
+                            {@const colInfo = selectedTable?.columns?.find((c) => c.name === col)}
+                            <label class="flex items-center justify-between px-1.5 py-1 rounded hover:bg-surface-container cursor-pointer select-none text-[11px]">
+                              <div class="flex items-center gap-2 truncate">
+                                <input
+                                  type="checkbox"
+                                  checked={isVisible}
+                                  onchange={() => toggleColumnVisibility(col)}
+                                  class="rounded border-outline-variant text-primary focus:ring-0 cursor-pointer"
+                                />
+                                <span class="truncate {isVisible ? 'text-on-surface font-medium' : 'text-outline line-through'}">
+                                  {col}
+                                </span>
+                              </div>
+                              <div class="flex items-center gap-1 text-[9px] text-outline shrink-0 ml-2">
+                                {#if colInfo?.pk}
+                                  <Key size={9} class="text-amber-500" />
+                                {/if}
+                                <span class="px-1 rounded bg-surface-container border border-outline-variant/50">{colInfo?.type || 'ANY'}</span>
+                              </div>
+                            </label>
+                          {/each}
+                          {#if filteredColumnsForPicker.length === 0}
+                            <div class="p-3 text-center text-outline text-[10px]">No columns match "{columnSearchQuery}"</div>
+                          {/if}
+                        </div>
+                      </div>
+                    {/if}
+                  </div>
                 </div>
 
                 <!-- Right Actions: Export Table to CSV / JSON / SQL -->
@@ -746,7 +1075,7 @@
                   <button
                     onclick={exportTableCsv}
                     class="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer"
-                    title="Export current page as CSV"
+                    title="Export visible columns as CSV"
                   >
                     <FileSpreadsheet size={11} />
                     <span>CSV</span>
@@ -755,7 +1084,7 @@
                   <button
                     onclick={exportTableJson}
                     class="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer"
-                    title="Export current page as JSON"
+                    title="Export visible columns as JSON"
                   >
                     <FileCode size={11} />
                     <span>JSON</span>
@@ -764,7 +1093,7 @@
                   <button
                     onclick={exportTableSql}
                     class="flex items-center gap-1 px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container text-on-surface-variant hover:text-on-surface cursor-pointer"
-                    title="Export current page as INSERT SQL"
+                    title="Export visible columns as INSERT SQL"
                   >
                     <FileText size={11} />
                     <span>SQL</span>
@@ -782,7 +1111,7 @@
                         <th class="py-2 px-3 text-[10px] text-outline font-semibold w-12 border-r border-outline-variant/60 text-center">
                           #
                         </th>
-                        {#each gridColumns as col}
+                        {#each visibleColumns as col}
                           {@const colInfo = selectedTable?.columns?.find((c) => c.name === col)}
                           <th
                             onclick={() => handleSort(col)}
@@ -822,8 +1151,9 @@
                           <td class="py-1.5 px-3 text-[10px] text-outline border-r border-outline-variant/40 text-center font-semibold">
                             {gridPage * gridPageSize + rIdx + 1}
                           </td>
-                          {#each row as cell, cIdx}
+                          {#each visibleColumnIndices as cIdx}
                             {@const colName = gridColumns[cIdx]}
+                            {@const cell = row[cIdx]}
                             <td
                               onclick={() => (cellModalContent = { col: colName, val: cell })}
                               class="py-1.5 px-3 border-r border-outline-variant/40 truncate max-w-xs hover:bg-primary/10 cursor-pointer transition-colors"
@@ -1071,8 +1401,24 @@
               <!-- Columns breakdown -->
               <div class="h-1/2 flex flex-col border-b border-outline-variant overflow-hidden">
                 <div class="h-8 px-3 border-b border-outline-variant bg-surface-container-low flex items-center justify-between text-xs shrink-0">
-                  <span class="text-outline text-[11px] font-semibold">TABLE COLUMNS ({selectedTable?.columns?.length || 0})</span>
-                  <span class="text-on-surface font-semibold">{selectedTableName}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-outline text-[11px] font-semibold">TABLE COLUMNS ({filteredSchemaColumns.length}/{selectedTable?.columns?.length || 0})</span>
+                    <span class="text-on-surface font-semibold">{selectedTableName}</span>
+                  </div>
+                  <div class="relative flex items-center max-w-[190px]">
+                    <Search size={11} class="absolute left-2 text-outline pointer-events-none" />
+                    <input
+                      bind:value={schemaColumnSearch}
+                      type="text"
+                      placeholder="Filter columns..."
+                      class="w-full bg-surface border border-outline-variant rounded pl-6 pr-5 py-0.5 text-[10px] text-on-surface placeholder:text-outline focus:outline-none focus:border-primary"
+                    />
+                    {#if schemaColumnSearch}
+                      <button onclick={() => (schemaColumnSearch = '')} class="absolute right-1.5 text-outline hover:text-on-surface cursor-pointer">
+                        <X size={10} />
+                      </button>
+                    {/if}
+                  </div>
                 </div>
 
                 <div class="flex-1 overflow-auto bg-surface">
@@ -1088,7 +1434,7 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/40">
-                      {#each selectedTable?.columns || [] as col}
+                      {#each filteredSchemaColumns as col}
                         <tr class="hover:bg-primary/5">
                           <td class="py-1.5 px-3 text-center text-outline text-[10px]">{col.cid}</td>
                           <td class="py-1.5 px-3 font-semibold text-on-surface flex items-center gap-1.5">
@@ -1440,9 +1786,9 @@
                   </div>
 
                   <div class="p-3.5 rounded-lg border border-outline-variant bg-surface flex flex-col gap-1">
-                    <span class="text-[10px] text-outline font-semibold">WAL FILE CHECKPOINT</span>
-                    <span class="text-base font-bold {metadata?.hasWal ? 'text-emerald-500' : 'text-outline'}">
-                      {metadata?.hasWal ? 'Replayed & Merged' : 'None Attached'}
+                    <span class="text-[10px] text-outline font-semibold">WAL FILE STATUS</span>
+                    <span class="text-base font-bold {metadata?.hasWal ? 'text-emerald-500' : metadata?.journalMode === 'wal' ? 'text-amber-500' : 'text-outline'}">
+                      {metadata?.hasWal ? 'Mounted & Merged' : metadata?.journalMode === 'wal' ? 'Missing (Snapshot Only)' : 'N/A (Non-WAL)'}
                     </span>
                   </div>
                 </div>
@@ -1459,8 +1805,8 @@
     <div class="absolute inset-0 z-50 bg-primary/20 backdrop-blur-xs border-2 border-dashed border-primary flex flex-col items-center justify-center pointer-events-none">
       <div class="bg-surface p-6 rounded-xl border border-outline-variant shadow-2xl flex flex-col items-center gap-2 text-center font-mono">
         <Upload size={32} class="text-primary animate-bounce" />
-        <h3 class="text-sm font-bold text-on-surface">Drop SQLite Files to Load</h3>
-        <p class="text-xs text-outline">Accepts .db, .sqlite, .sqlite3, and companion .wal / .shm files</p>
+        <h3 class="text-sm font-bold text-on-surface">Drop SQLite Files or Folder to Load</h3>
+        <p class="text-xs text-outline">Accepts .db, companion .wal / .shm files, or folders containing them</p>
       </div>
     </div>
   {/if}

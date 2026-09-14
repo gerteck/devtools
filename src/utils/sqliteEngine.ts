@@ -58,6 +58,58 @@ export async function getSqliteModule() {
   return sqliteInstancePromise;
 }
 
+export interface DatabaseLoadedResult {
+  primaryFile: string;
+  walFile: string | null;
+  shmFile: string | null;
+  totalFilesProcessed: number;
+}
+
+function isSqliteHeader(data: Uint8Array): boolean {
+  if (data.byteLength < 16) return false;
+  const magic = [0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00];
+  return magic.every((byte, i) => data[i] === byte);
+}
+
+function isWalHeaderOrName(name: string, data: Uint8Array): boolean {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('-wal') || lower.endsWith('.wal') || lower.includes('-wal') || lower.includes('.wal')) {
+    return true;
+  }
+  if (data.byteLength >= 4) {
+    const view = new DataView(data.buffer, data.byteOffset, 4);
+    const magicBig = view.getUint32(0, false);
+    const magicLittle = view.getUint32(0, true);
+    if (
+      magicBig === 0x377f0682 ||
+      magicBig === 0x377f0683 ||
+      magicLittle === 0x377f0682 ||
+      magicLittle === 0x377f0683
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isShmName(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.endsWith('-shm') || lower.endsWith('.shm') || lower.includes('-shm') || lower.includes('.shm');
+}
+
+function getCleanFileName(pathOrName: string): string {
+  const parts = pathOrName.split(/[/\\]/);
+  return parts[parts.length - 1] || pathOrName;
+}
+
+function getBasePrefix(fileName: string): string {
+  const clean = getCleanFileName(fileName);
+  return clean
+    .replace(/(-wal|\.wal|-shm|\.shm|-journal|\.journal)$/i, '')
+    .replace(/\.(sqlite|sqlite3|db|s3db|sl3)$/i, '')
+    .toLowerCase();
+}
+
 export class SqliteEngine {
   private sqlite3: any;
   private db: any = null;
@@ -71,7 +123,9 @@ export class SqliteEngine {
   /**
    * Mount and open a database with optional companion .wal and .shm files.
    */
-  async loadDatabaseFiles(files: { name: string; data: Uint8Array }[]) {
+  async loadDatabaseFiles(
+    files: { name: string; path?: string; data: Uint8Array }[]
+  ): Promise<DatabaseLoadedResult> {
     if (this.db) {
       try {
         this.db.close();
@@ -81,46 +135,128 @@ export class SqliteEngine {
       this.db = null;
     }
 
-    // 1. Identify primary .db/.sqlite file
-    const primaryFile = files.find((f) =>
-      /\.(sqlite|sqlite3|db)$/i.test(f.name)
-    ) || files[0];
+    // Filter out OS junk files (e.g. .DS_Store, Thumbs.db, hidden files)
+    const validFiles = files.filter((f) => {
+      const cleanName = getCleanFileName(f.name);
+      return (
+        cleanName &&
+        !cleanName.startsWith('.') &&
+        cleanName !== 'Thumbs.db' &&
+        cleanName !== 'desktop.ini'
+      );
+    });
 
-    if (!primaryFile) {
-      throw new Error('No database file found in selection.');
+    if (validFiles.length === 0) {
+      throw new Error('No valid files found in upload.');
     }
 
-    const baseName = primaryFile.name.replace(/\.(sqlite|sqlite3|db)$/i, '');
-    const vfsDbPath = `db_${Date.now()}_${baseName}.sqlite`;
+    // 1. Identify primary .db/.sqlite file
+    // Strategy A: Check SQLite format 3 magic header
+    let primaryFile = validFiles.find((f) => isSqliteHeader(f.data));
+
+    // Strategy B: If no magic header found (e.g. 0-byte file), check filename extension
+    if (!primaryFile) {
+      primaryFile = validFiles.find(
+        (f) =>
+          /\.(sqlite|sqlite3|db|s3db|sl3)$/i.test(f.name) &&
+          !isWalHeaderOrName(f.name, f.data) &&
+          !isShmName(f.name)
+      );
+    }
+
+    // Strategy C: Pick first file that is not explicitly WAL or SHM
+    if (!primaryFile) {
+      primaryFile = validFiles.find(
+        (f) => !isWalHeaderOrName(f.name, f.data) && !isShmName(f.name)
+      );
+    }
+
+    if (!primaryFile) {
+      throw new Error(
+        'Could not locate main SQLite database file. If uploading WAL files, please include the main .db/.sqlite database file as well.'
+      );
+    }
+
+    const primaryDisplayName = getCleanFileName(primaryFile.name);
+    const primaryBase = getBasePrefix(primaryDisplayName);
+
+    // 2. Identify companion WAL / SHM files if provided
+    let walFile = validFiles.find(
+      (f) =>
+        f !== primaryFile &&
+        isWalHeaderOrName(f.name, f.data) &&
+        getBasePrefix(f.name) === primaryBase
+    );
+    if (!walFile) {
+      walFile = validFiles.find(
+        (f) => f !== primaryFile && isWalHeaderOrName(f.name, f.data)
+      );
+    }
+
+    let shmFile = validFiles.find(
+      (f) =>
+        f !== primaryFile &&
+        isShmName(f.name) &&
+        getBasePrefix(f.name) === primaryBase
+    );
+    if (!shmFile) {
+      shmFile = validFiles.find((f) => f !== primaryFile && isShmName(f.name));
+    }
+
+    // 3. Write primary and companions to virtual POSIX filesystem with clean ASCII name
+    const safeId = Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const vfsDbPath = `db_${safeId}.sqlite`;
     const vfsWalPath = `${vfsDbPath}-wal`;
     const vfsShmPath = `${vfsDbPath}-shm`;
 
-    // 2. Identify companion WAL / SHM files if provided
-    const walFile = files.find(
-      (f) =>
-        f !== primaryFile &&
-        (f.name.endsWith('-wal') || f.name.endsWith('.wal'))
-    );
-    const shmFile = files.find(
-      (f) =>
-        f !== primaryFile &&
-        (f.name.endsWith('-shm') || f.name.endsWith('.shm'))
-    );
-
-    // 3. Write primary and companions to virtual POSIX filesystem
     this.sqlite3.capi.sqlite3_js_posix_create_file(vfsDbPath, primaryFile.data);
 
-    if (walFile) {
+    if (walFile && walFile.data.byteLength > 0) {
       this.sqlite3.capi.sqlite3_js_posix_create_file(vfsWalPath, walFile.data);
     }
-    if (shmFile) {
+    if (shmFile && shmFile.data.byteLength > 0) {
       this.sqlite3.capi.sqlite3_js_posix_create_file(vfsShmPath, shmFile.data);
     }
 
-    // 4. Open the database (SQLite automatically applies and checkpoints the WAL)
-    this.db = new this.sqlite3.oo1.DB(vfsDbPath);
+    // 4. Open the database using POSIX VFS supporting WAL & shared-memory locking
+    let openError: any = null;
+    const vfsCandidates = ['unix', 'unix-excl', undefined];
 
-    // If WAL was provided, trigger a passive checkpoint to ensure full visibility
+    for (const vfs of vfsCandidates) {
+      try {
+        this.db = vfs
+          ? new this.sqlite3.oo1.DB(vfsDbPath, 'c', vfs)
+          : new this.sqlite3.oo1.DB(vfsDbPath);
+
+        // Verification query
+        this.db.exec('PRAGMA schema_version;');
+        openError = null;
+        break;
+      } catch (err: any) {
+        openError = err;
+        if (this.db) {
+          try {
+            this.db.close();
+          } catch {}
+          this.db = null;
+        }
+      }
+    }
+
+    if (!this.db && openError) {
+      const msg = String(openError.message || openError);
+      if (msg.includes('SQLITE_CANTOPEN')) {
+        throw new Error(
+          `SQLITE_CANTOPEN: SQLite was unable to open "${primaryDisplayName}". ` +
+            (walFile
+              ? 'The WAL companion file may be corrupted or locked by another process.'
+              : 'If this database is in WAL mode, please select or drop the companion .wal file together with the database file, or select the containing folder via "Open Folder".')
+        );
+      }
+      throw openError;
+    }
+
+    // 5. If WAL was provided, trigger checkpoint to ensure full visibility of uncheckpointed transactions
     if (walFile) {
       try {
         this.db.exec('PRAGMA wal_checkpoint(PASSIVE);');
@@ -129,8 +265,19 @@ export class SqliteEngine {
       }
     }
 
-    // 5. Build database metadata & introspect tables
-    await this.refreshMetadata(primaryFile.name, primaryFile.data.byteLength, !!walFile);
+    // 6. Build database metadata & introspect tables
+    await this.refreshMetadata(
+      primaryDisplayName,
+      primaryFile.data.byteLength,
+      !!walFile
+    );
+
+    return {
+      primaryFile: primaryDisplayName,
+      walFile: walFile ? getCleanFileName(walFile.name) : null,
+      shmFile: shmFile ? getCleanFileName(shmFile.name) : null,
+      totalFilesProcessed: validFiles.length,
+    };
   }
 
   /**
@@ -473,7 +620,8 @@ export class SqliteEngine {
     pageSize = 50,
     sortCol?: string,
     sortOrder: 'ASC' | 'DESC' = 'ASC',
-    searchQuery?: string
+    searchQuery?: string,
+    searchCol?: string
   ): {
     columns: string[];
     rows: any[][];
@@ -502,10 +650,14 @@ export class SqliteEngine {
       let whereClause = '';
       if (searchQuery && searchQuery.trim()) {
         const term = searchQuery.trim().replace(/'/g, "''");
-        const conditions = colNames.map(
-          (c) => `CAST("${c}" AS TEXT) LIKE '%${term}%'`
-        );
-        whereClause = `WHERE (${conditions.join(' OR ')})`;
+        if (searchCol && colNames.includes(searchCol)) {
+          whereClause = `WHERE (CAST("${searchCol}" AS TEXT) LIKE '%${term}%')`;
+        } else {
+          const conditions = colNames.map(
+            (c) => `CAST("${c}" AS TEXT) LIKE '%${term}%'`
+          );
+          whereClause = `WHERE (${conditions.join(' OR ')})`;
+        }
       }
 
       // Get count
