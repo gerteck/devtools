@@ -14,6 +14,7 @@
     Workflow,
     Network,
     Database,
+    NotebookPen,
   } from '@lucide/svelte';
   import pkg from '../../package.json';
 
@@ -42,6 +43,7 @@
 
   const navItems = [
     { route: '/' as Route, label: 'All Tools', icon: LayoutGrid },
+    { route: '/notepad' as Route, label: 'Developer Notepad', icon: NotebookPen },
     { route: '/json' as Route, label: 'JSON Formatter', icon: Braces },
     { route: '/diff' as Route, label: 'Diff Checker', icon: GitCompare },
     { route: '/mermaid' as Route, label: 'Mermaid Studio', icon: Workflow },

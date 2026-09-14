@@ -5,6 +5,7 @@
  */
 
 export const TOOL_LOADERS = {
+  '/notepad': () => import('../tools/Notepad.svelte'),
   '/json': () => import('../tools/JsonSuite.svelte'),
   '/diff': () => import('../tools/DiffChecker.svelte'),
   '/mermaid': () => import('../tools/MermaidStudio.svelte'),

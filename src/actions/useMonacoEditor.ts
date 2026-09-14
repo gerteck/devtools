@@ -112,6 +112,9 @@ export const useMonacoEditor: Action<HTMLElement, MonacoEditorOptions> = (node, 
       if (newOptions.readOnly !== undefined && newOptions.readOnly !== options.readOnly) {
         editor.updateOptions({ readOnly: newOptions.readOnly });
       }
+      if (newOptions.wordWrap !== undefined && newOptions.wordWrap !== options.wordWrap) {
+        editor.updateOptions({ wordWrap: newOptions.wordWrap });
+      }
       options = newOptions;
     },
     destroy() {

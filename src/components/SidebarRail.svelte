@@ -2,17 +2,18 @@
   import { router, TOOLS } from '../router.svelte';
   import type { Route } from '../types';
   import { prefetchTool } from '../utils/toolLoader';
-  import { Braces, GitCompare, Workflow, LayoutGrid, Network, Database } from '@lucide/svelte';
+  import { Braces, GitCompare, Workflow, LayoutGrid, Network, Database, NotebookPen } from '@lucide/svelte';
 
   let { currentRoute }: { currentRoute: Route } = $props();
 
   const navItems = [
     { route: '/' as Route, label: 'All Tools', icon: LayoutGrid, shortcut: '⌘0' },
-    { route: '/json' as Route, label: 'JSON Formatter', icon: Braces, shortcut: '⌘1' },
-    { route: '/diff' as Route, label: 'Diff Checker', icon: GitCompare, shortcut: '⌘2' },
-    { route: '/mermaid' as Route, label: 'Mermaid Studio', icon: Workflow, shortcut: '⌘3' },
-    { route: '/plantuml' as Route, label: 'PlantUML Studio', icon: Network, shortcut: '⌘4' },
-    { route: '/sqlite' as Route, label: 'SQLite Viewer', icon: Database, shortcut: '⌘5' },
+    { route: '/notepad' as Route, label: 'Developer Notepad', icon: NotebookPen, shortcut: '⌘1' },
+    { route: '/json' as Route, label: 'JSON Formatter', icon: Braces, shortcut: '⌘2' },
+    { route: '/diff' as Route, label: 'Diff Checker', icon: GitCompare, shortcut: '⌘3' },
+    { route: '/mermaid' as Route, label: 'Mermaid Studio', icon: Workflow, shortcut: '⌘4' },
+    { route: '/plantuml' as Route, label: 'PlantUML Studio', icon: Network, shortcut: '⌘5' },
+    { route: '/sqlite' as Route, label: 'SQLite Viewer', icon: Database, shortcut: '⌘6' },
   ];
 </script>
 

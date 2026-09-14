@@ -39,22 +39,25 @@
     scheme = newScheme;
   }
 
-  // Global keyboard shortcuts (⌘1, ⌘2, ⌘3, ⌘0)
+  // Global keyboard shortcuts (⌘1..⌘6, ⌘0/⌘H)
   function handleKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
       if (e.key === '1') {
         e.preventDefault();
-        router.navigate('/json');
+        router.navigate('/notepad');
       } else if (e.key === '2') {
         e.preventDefault();
-        router.navigate('/diff');
+        router.navigate('/json');
       } else if (e.key === '3') {
         e.preventDefault();
-        router.navigate('/mermaid');
+        router.navigate('/diff');
       } else if (e.key === '4') {
         e.preventDefault();
-        router.navigate('/plantuml');
+        router.navigate('/mermaid');
       } else if (e.key === '5') {
+        e.preventDefault();
+        router.navigate('/plantuml');
+      } else if (e.key === '6') {
         e.preventDefault();
         router.navigate('/sqlite');
       } else if (e.key === '0' || e.key.toLowerCase() === 'h') {
@@ -84,6 +87,12 @@
     <main class="flex-1 flex flex-col min-w-0 min-h-0 {router.currentRoute === '/' ? 'overflow-y-auto' : 'overflow-hidden'} bg-background">
       {#if router.currentRoute === '/'}
         <Home />
+      {:else if router.currentRoute === '/notepad'}
+        <LazyTool
+          name="Developer Notepad"
+          loader={TOOL_LOADERS['/notepad']}
+          props={{ theme: monacoTheme }}
+        />
       {:else if router.currentRoute === '/json'}
         <LazyTool
           name="JSON Formatter"

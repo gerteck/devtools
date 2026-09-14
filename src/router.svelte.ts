@@ -2,13 +2,23 @@ import type { Route, ToolItem } from './types';
 
 export const TOOLS: ToolItem[] = $state([
   {
+    id: 'notepad',
+    name: 'Developer Notepad',
+    description: 'Multi-tab developer scratchpad with syntax highlighting, case transforms, line utilities, and markdown preview.',
+    tag: 'Notes / Utilities',
+    route: '/notepad',
+    shortcutKey: '1',
+    shortcutLabel: '⌘1',
+    icon: 'notebook-pen',
+  },
+  {
     id: 'json',
     name: 'JSON Formatter',
     description: 'Format, validate, and inspect JSON payloads. Handles large inputs with collapsible trees and syntax highlighting.',
     tag: 'JSON / Schema',
     route: '/json',
-    shortcutKey: '1',
-    shortcutLabel: '⌘1',
+    shortcutKey: '2',
+    shortcutLabel: '⌘2',
     icon: '{ }',
   },
   {
@@ -17,8 +27,8 @@ export const TOOLS: ToolItem[] = $state([
     description: 'Unified and split-pane text comparison for source code, configuration files, and raw text snippets.',
     tag: 'Text / Unified',
     route: '/diff',
-    shortcutKey: '2',
-    shortcutLabel: '⌘2',
+    shortcutKey: '3',
+    shortcutLabel: '⌘3',
     icon: 'difference',
   },
   {
@@ -28,8 +38,8 @@ export const TOOLS: ToolItem[] = $state([
     description: 'Text-to-diagram editor supporting flowcharts, sequence diagrams, and class relations with SVG export.',
     tag: 'Diagrams / SVG',
     route: '/mermaid',
-    shortcutKey: '3',
-    shortcutLabel: '⌘3',
+    shortcutKey: '4',
+    shortcutLabel: '⌘4',
     icon: 'hub',
   },
   {
@@ -39,8 +49,8 @@ export const TOOLS: ToolItem[] = $state([
     description: 'Component, sequence, and class diagrams with cloud encoding, pan-zoom viewer, and high-res export.',
     tag: 'UML / Cloud',
     route: '/plantuml',
-    shortcutKey: '4',
-    shortcutLabel: '⌘4',
+    shortcutKey: '5',
+    shortcutLabel: '⌘5',
     icon: 'network',
   },
   {
@@ -50,8 +60,8 @@ export const TOOLS: ToolItem[] = $state([
     description: 'Inspect, query, and export SQLite databases client-side with full .wal write-ahead log support.',
     tag: 'Database / SQL',
     route: '/sqlite',
-    shortcutKey: '5',
-    shortcutLabel: '⌘5',
+    shortcutKey: '6',
+    shortcutLabel: '⌘6',
     icon: 'database',
   },
 ]);
@@ -70,7 +80,14 @@ class Router {
   private getRouteFromHash(): Route {
     if (typeof window === 'undefined') return '/';
     const hash = window.location.hash.replace(/^#/, '');
-    if (hash === '/json' || hash === '/diff' || hash === '/mermaid' || hash === '/plantuml' || hash === '/sqlite') {
+    if (
+      hash === '/notepad' ||
+      hash === '/json' ||
+      hash === '/diff' ||
+      hash === '/mermaid' ||
+      hash === '/plantuml' ||
+      hash === '/sqlite'
+    ) {
       return hash;
     }
     return '/';

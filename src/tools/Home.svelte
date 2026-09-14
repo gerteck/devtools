@@ -11,6 +11,7 @@
     Database,
     Star,
     ExternalLink,
+    NotebookPen,
   } from '@lucide/svelte';
 
   let searchQuery = $state('');
@@ -36,6 +37,7 @@
   }
 
   function getToolIcon(id: string) {
+    if (id === 'notepad') return NotebookPen;
     if (id === 'json') return Braces;
     if (id === 'diff') return GitCompare;
     if (id === 'mermaid') return Workflow;
