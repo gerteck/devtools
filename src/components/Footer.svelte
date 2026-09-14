@@ -22,11 +22,12 @@
 
   const shortcuts = [
     { key: '⌘ / Ctrl + 0', action: 'Return to Home / All Tools' },
-    { key: '⌘ / Ctrl + 1', action: 'Open JSON Formatter' },
-    { key: '⌘ / Ctrl + 2', action: 'Open Diff Checker' },
-    { key: '⌘ / Ctrl + 3', action: 'Open Mermaid Studio' },
-    { key: '⌘ / Ctrl + 4', action: 'Open PlantUML Viewer' },
-    { key: '⌘ / Ctrl + 5', action: 'Open SQLite Viewer' },
+    { key: '⌘ / Ctrl + 1', action: 'Open Developer Notepad' },
+    { key: '⌘ / Ctrl + 2', action: 'Open JSON Formatter' },
+    { key: '⌘ / Ctrl + 3', action: 'Open Diff Checker' },
+    { key: '⌘ / Ctrl + 4', action: 'Open Mermaid Studio' },
+    { key: '⌘ / Ctrl + 5', action: 'Open PlantUML Studio' },
+    { key: '⌘ / Ctrl + 6', action: 'Open SQLite Viewer' },
     { key: '/', action: 'Focus search bar on Home page' },
   ];
 </script>
